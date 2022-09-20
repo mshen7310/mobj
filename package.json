@@ -1,0 +1,38 @@
+{
+  "name": "alpacar",
+  "version": "1.0.0",
+  "description": "A little library to diff, patch, match, check or generate js object/array.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "/dist"
+  ],
+  "scripts": {
+    "test": "nyc mocha ./test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mshen7310/mobj.git"
+  },
+  "keywords": [
+    "deep",
+    "diff",
+    "patch",
+    "match",
+    "generate",
+    "check",
+    "object",
+    "array"
+  ],
+  "author": "Michael Shen",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/mshen7310/mobj/issues"
+  },
+  "homepage": "https://github.com/mshen7310/mobj#readme",
+  "devDependencies": {
+    "mocha": "^10.0.0",
+    "nyc": "^15.1.0",
+    "typescript": "^4.8.3"
+  }
+}
