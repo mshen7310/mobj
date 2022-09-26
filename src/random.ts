@@ -100,6 +100,30 @@ export function anyOf(...arg: any): any {
     return arg[index]
 }
 
+export function bigintOf(start: bigint, end?: bigint): bigint {
+    if (end === undefined) {
+        end = start > 0n ? start : 0n
+        start = start > 0n ? 0n : start
+    }
+    if (start > end) {
+        let tmp = start
+        start = end;
+        end = tmp;
+    }
+    const difference: bigint = end - start;
+    const differenceLength = difference.toString().length;
+    let multiplier = '';
+    while (multiplier.length < differenceLength) {
+        multiplier += Math.random()
+            .toString()
+            .split('.')[1];
+    }
+    multiplier = multiplier.slice(0, differenceLength);
+    const divisor = '1' + '0'.repeat(differenceLength);
+    const randomDifference = (difference * BigInt(multiplier)) / BigInt(divisor);
+    return start + randomDifference;
+
+}
 export function intOf(start: number, end?: number): number {
     if (end === undefined) {
         end = Math.max(start, 0)
@@ -111,6 +135,14 @@ export function intOf(start: number, end?: number): number {
         end = tmp;
     }
     return start + Math.round(random() * (end - start))
+}
+export function elementOf(array: any[]): any {
+    if (Array.isArray(array)) {
+        return array[intOf(array.length - 1)]
+    } else if (array && typeof array === 'object') {
+        return array[elementOf(Object.keys(array))]
+    }
+
 }
 export function numberOf(start: number, end?: number): number {
     if (end === undefined) {
