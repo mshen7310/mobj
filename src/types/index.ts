@@ -1,22 +1,36 @@
+import { Path } from "../path";
 
 
-export const GeneratorSymbol: unique symbol = Symbol.for('alpacar.Generator')
+export const SamplerSymbol: unique symbol = Symbol.for('alpacar.Sampler')
 export const MatcherSymbol: unique symbol = Symbol.for('alpacar.Matcher')
+export const DifferSymbol: unique symbol = Symbol.for('alpacar.Differ')
 
+
+export interface Diff<T> {
+    key: Path
+    type?: string
+    expect: T
+    got: any
+    message?: string
+}
+export type Differ<T> = (data?: any) => IterableIterator<Diff<T>>
 export type Matcher = (data?: any) => boolean;
-export type Generator<T> = () => T
+export type Sampler<T> = () => T
 
-
+export function isDiffer<T>(f: any): f is Differ<T> {
+    return typeof f === 'function' && f[DifferSymbol] === true
+}
 export function isMatcher(f: any): f is Matcher {
     return typeof f === 'function' && f[MatcherSymbol] === true
 }
-export function isGenerator<T>(f: any): f is Generator<T> {
-    return typeof f === 'function' && f[GeneratorSymbol] === true
+export function isSampler<T>(f: any): f is Sampler<T> {
+    return typeof f === 'function' && f[SamplerSymbol] === true
 }
 
 export interface Type<T, P> {
-    generator(): Generator<T>
+    sampler(): Sampler<T>
     matcher(): Matcher
+    differ(): Differ<P>
     pattern(): P
     factory(): (p: P) => Type<T, P>
 }

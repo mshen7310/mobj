@@ -1,4 +1,4 @@
-import { Generator, GeneratorSymbol, Matcher, MatcherSymbol, Type } from ".";
+import { Sampler, SamplerSymbol, Matcher, MatcherSymbol, Type, Differ, Diff, DifferSymbol } from ".";
 import { elementOf } from "../random";
 import { isString, isStringArray } from "./String";
 export type SymbolPattern = symbol | symbol[] | string | string[]
@@ -39,14 +39,30 @@ class SymbolClass implements Type<symbol, SymbolPattern>{
     factory(): (p: SymbolPattern) => Type<symbol, SymbolPattern> {
         return makeSymbol
     }
-    generator(): Generator<symbol> {
+    sampler(): Sampler<symbol> {
         let ptn: symbol[] = this.getPatternArray()
         let ret: () => symbol = () => elementOf(ptn)
-        ret[GeneratorSymbol] = true
+        ret[SamplerSymbol] = true
+        return ret;
+    }
+    differ(): Differ<SymbolPattern> {
+        let self = this
+        let ptn: symbol[] = this.getPatternArray()
+        let ret: (data: any) => IterableIterator<Diff<SymbolPattern>>
+        function* retf(data: any) {
+            if (typeof data !== 'symbol' || ptn.find(x => x === data) === undefined) {
+                return {
+                    key: [],
+                    expect: self.ptn,
+                    got: data
+                }
+            }
+        }
+        ret = retf
+        ret[DifferSymbol] = true
         return ret;
     }
     matcher(): Matcher {
-        let self = this;
         let ptn: symbol[] = this.getPatternArray()
         let ret: (data: any) => boolean = (data: any) => typeof data === 'symbol' && ptn.find(x => x === data) !== undefined
         ret[MatcherSymbol] = true

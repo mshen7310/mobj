@@ -1,4 +1,4 @@
-import { Generator, GeneratorSymbol, Matcher, MatcherSymbol, Type } from ".";
+import { Sampler, SamplerSymbol, Matcher, MatcherSymbol, Type, DifferSymbol, Differ, Diff } from ".";
 
 export type FunctionPattern = any
 
@@ -18,11 +18,40 @@ class FunctionClass implements Type<(...arg: any[]) => any, FunctionPattern> {
     factory(): (p: FunctionPattern) => Type<(...arg: any[]) => any, FunctionPattern> {
         return makeFunction
     }
-    generator(): Generator<(...arg: any[]) => any> {
+    sampler(): Sampler<(...arg: any[]) => any> {
         let self = this;
         let ret = isFunction(this.ptn) ? () => self.ptn : () => () => undefined
-        ret[GeneratorSymbol] = true
+        ret[SamplerSymbol] = true
         return ret;
+    }
+    differ(): Differ<FunctionPattern> {
+        let self = this
+        let ret: (data: any) => IterableIterator<Diff<FunctionPattern>>
+        if (isFunction(this.ptn)) {
+            function* retf(data: any) {
+                if (!isFunction(data) || data !== self.ptn) {
+                    return {
+                        key: [],
+                        expect: self.ptn,
+                        got: data
+                    }
+                }
+            }
+            ret = retf
+        } else {
+            function* retf(data: any) {
+                if (!isFunction(data)) {
+                    return {
+                        key: [],
+                        expect: self.ptn,
+                        got: data
+                    }
+                }
+            }
+            ret = retf
+        }
+        ret[DifferSymbol] = true
+        return ret
     }
     matcher(): Matcher {
         let self = this;

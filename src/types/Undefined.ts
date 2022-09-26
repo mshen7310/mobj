@@ -1,4 +1,4 @@
-import { Generator, GeneratorSymbol, Matcher, MatcherSymbol, Type } from ".";
+import { Sampler, SamplerSymbol, Matcher, MatcherSymbol, Type, Differ, Diff, DifferSymbol } from ".";
 export type UndefinedPattern = undefined
 class UndefinedClass implements Type<undefined, UndefinedPattern>{
     constructor(private ptn: UndefinedPattern) {
@@ -12,10 +12,25 @@ class UndefinedClass implements Type<undefined, UndefinedPattern>{
     factory(): (p: UndefinedPattern) => Type<undefined, UndefinedPattern> {
         return makeUndefined
     }
-    generator(): Generator<undefined> {
+    sampler(): Sampler<undefined> {
         let ret = () => undefined
-        ret[GeneratorSymbol] = true
+        ret[SamplerSymbol] = true
         return ret;
+    }
+    differ(): Differ<UndefinedPattern> {
+        let ret: (data: any) => IterableIterator<Diff<UndefinedPattern>>
+        function* retf(data: any) {
+            if (data !== undefined) {
+                return {
+                    key: [],
+                    expect: undefined,
+                    got: data
+                }
+            }
+        }
+        ret = retf
+        ret[DifferSymbol] = true
+        return ret
     }
     matcher(): Matcher {
         let ret = (data: any) => data === undefined

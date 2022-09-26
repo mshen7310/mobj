@@ -1,4 +1,4 @@
-import { GeneratorSymbol, Generator, Matcher, MatcherSymbol, Type } from "."
+import { SamplerSymbol, Sampler, Matcher, MatcherSymbol, Type, Differ, Diff, DifferSymbol } from "."
 import { elementOf, intOf, numberOf } from "../random"
 
 export type NumberRange = [number, number]
@@ -35,8 +35,8 @@ class NumberClass implements Type<number, NumberPattern>{
     factory(): (p: NumberPattern) => Type<number, NumberPattern> {
         return makeNumber;
     }
-    generator(): Generator<number> {
-        function rangeGenerator(start: number, end: number): Generator<number> {
+    sampler(): Sampler<number> {
+        function rangeGenerator(start: number, end: number): Sampler<number> {
             let max = Math.max(start, end)
             let min = Math.min(start, end)
             if (max === Math.floor(max) && min === Math.ceil(min)) {
@@ -58,9 +58,69 @@ class NumberClass implements Type<number, NumberPattern>{
         } else if (isNumberArray(self.ptn)) {
             ret = () => elementOf(self.ptn as number[])
         }
-        ret[GeneratorSymbol] = true
+        ret[SamplerSymbol] = true
         return ret;
     }
+    differ(): Differ<NumberPattern> {
+        let self = this;
+        let ret: (data: any) => IterableIterator<Diff<NumberPattern>>
+        if (typeof self.ptn === 'number') {
+            function* retf(data: any) {
+                if (typeof data !== 'number' || data !== self.ptn) {
+                    return {
+                        key: [],
+                        expect: self.ptn,
+                        got: data
+                    }
+                }
+            }
+            ret = retf
+        } else if (isNumberRange(self.ptn)) {
+            function* retf(data: any) {
+                let [start, end] = self.ptn as NumberRange
+                if (typeof data !== 'number' || data > end || data < start) {
+                    return {
+                        key: [],
+                        expect: self.ptn,
+                        got: data
+                    }
+                }
+            }
+            ret = retf
+        } else if (isNumberArray(self.ptn)) {
+            function* retf(data: any) {
+                if (typeof data !== 'number' || (self.ptn as number[]).find(x => x === data) === undefined) {
+                    return {
+                        key: [],
+                        expect: self.ptn,
+                        got: data
+                    }
+                }
+            }
+            ret = retf
+        } else if (isNumberRangeArray(self.ptn)) {
+            function* retf(data: any) {
+                if (typeof data === 'number') {
+                    let ptn: NumberRange[] = self.ptn as NumberRange[]
+                    for (let i = 0; i < ptn.length; ++i) {
+                        let [start, end] = ptn[i]
+                        if (data >= start && data <= end) {
+                            return
+                        }
+                    }
+                }
+                return {
+                    key: [],
+                    expect: self.ptn,
+                    got: data
+                }
+            }
+            ret = retf
+        }
+        ret[DifferSymbol] = true;
+        return ret;
+    }
+    //matcher might be redundent
     matcher(): Matcher {
         let self = this;
         let ret: (data: any) => boolean;

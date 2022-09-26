@@ -1,6 +1,6 @@
 import { getDate, getDay, getDaysInMonth, getHours, getMilliseconds, getMinutes, getMonth, getSeconds, getWeek, getYear, isAfter, isBefore, isSameMonth } from "date-fns/fp"
 import { set, startOfWeek, nextDay, setDefaultOptions } from 'date-fns'
-import { Generator, GeneratorSymbol, Matcher, MatcherSymbol, Type } from "."
+import { Sampler, SamplerSymbol, Matcher, MatcherSymbol, Type, Diff, Differ, DifferSymbol } from "."
 import { elementOf, intOf } from "../random"
 import { es, zhCN, } from 'date-fns/locale'
 
@@ -58,7 +58,7 @@ class DateClass implements Type<Date, DatePattern>{
     factory(): (p: DatePattern) => Type<Date, DatePattern> {
         return makeDate;
     }
-    generator(): Generator<Date> {
+    sampler(): Sampler<Date> {
         let self = this;
         let ret: () => Date;
         if (isDate(self.ptn)) {
@@ -101,8 +101,91 @@ class DateClass implements Type<Date, DatePattern>{
                 return spec;
             }
         }
-        ret[GeneratorSymbol] = true
+        ret[SamplerSymbol] = true
         return ret;
+    }
+    differ(): Differ<DatePattern> {
+        let self = this
+        let ret: (data: any) => IterableIterator<Diff<DatePattern>>
+        if (isDate(self.ptn)) {
+            function* retf(data: any) {
+                if (!(data instanceof Date) || data.getTime() !== (self.ptn as Date).getTime()) {
+                    return {
+                        key: [],
+                        expect: self.ptn,
+                        got: data
+                    }
+                }
+            }
+            ret = retf
+        } else if (isDateRange(self.ptn)) {
+            let [start, end] = self.ptn
+            function* retf(data: any) {
+                if (!(data instanceof Date) || isAfter(start, data) || isBefore(end, data)) {
+                    return {
+                        key: [],
+                        expect: self.ptn,
+                        got: data
+                    }
+                }
+            }
+            ret = retf
+        } else if (isDateArray(self.ptn)) {
+            function* retf(data: any) {
+                if (!(data instanceof Date) || (self.ptn as Date[]).find(x => x.getTime() === data.getTime()) === undefined) {
+                    return {
+                        key: [],
+                        expect: self.ptn,
+                        got: data
+                    }
+                }
+            }
+            ret = retf
+        } else if (isDateRangeArray(self.ptn)) {
+            function* retf(data: any) {
+                if (data instanceof Date) {
+                    let ptn: DateRange[] = self.ptn as DateRange[]
+                    for (let i = 0; i < ptn.length; ++i) {
+                        let [start, end] = ptn[i]
+                        if (isAfter(data, start) && isBefore(data, end)) {
+                            return
+                        }
+                    }
+                }
+                return {
+                    key: [],
+                    expect: self.ptn,
+                    got: data
+                }
+            }
+            ret = retf
+        } else if (isDateSpec(self.ptn)) {
+            let spec: DateSpec = self.ptn
+            function* retf(data: any) {
+                if (data instanceof Date) {
+                    let year: boolean = (typeof spec.year !== 'number' || getYear(data) === spec.year)
+                    let month: boolean = (typeof spec.month !== 'number' || getMonth(data) + 1 === spec.month)
+                    let date: boolean = (typeof spec.date !== 'number' || getDate(data) === spec.date)
+                    let week: boolean = (typeof spec.week !== 'number' || getDay(data) + 1 === spec.week)
+                    let hour: boolean = (typeof spec.hours !== 'number' || getHours(data) === spec.hours)
+                    let minute: boolean = (typeof spec.minutes !== 'number' || getMinutes(data) === spec.minutes)
+                    let second: boolean = (typeof spec.seconds !== 'number' || getSeconds(data) === spec.seconds)
+                    let milliseconds: boolean = (typeof spec.milliseconds !== 'number' || getMilliseconds(data) === spec.milliseconds)
+                    if (year && month && date && week && hour && minute && second && milliseconds) {
+                        return
+                    }
+                }
+                return {
+                    key: [],
+                    expect: self.ptn,
+                    got: data
+                }
+            }
+            ret = retf
+        }
+        ret[DifferSymbol] = true;
+        return ret
+
     }
     matcher(): Matcher {
         let self = this;
@@ -113,9 +196,9 @@ class DateClass implements Type<Date, DatePattern>{
             let [start, end] = self.ptn
             ret = (datetime: any) => (datetime instanceof Date) && isAfter(datetime, start) && isBefore(datetime, end)
         } else if (isDateArray(self.ptn)) {
-            return (datetime: any) => (datetime instanceof Date) && (self.ptn as Date[]).find(x => x.getTime() === datetime.getTime()) !== undefined
+            ret = (datetime: any) => (datetime instanceof Date) && (self.ptn as Date[]).find(x => x.getTime() === datetime.getTime()) !== undefined
         } else if (isDateRangeArray(self.ptn)) {
-            return (datetime: any) => {
+            ret = (datetime: any) => {
                 if (datetime instanceof Date) {
                     let ptn: DateRange[] = self.ptn as DateRange[]
                     for (let i = 0; i < ptn.length; ++i) {

@@ -1,4 +1,4 @@
-import { Type, Generator, Matcher, MatcherSymbol, GeneratorSymbol } from ".";
+import { Type, Sampler, Matcher, MatcherSymbol, SamplerSymbol, Diff, Differ, DifferSymbol } from ".";
 import { elementOf, intOf } from "../random"
 const RandExp = require("randexp/types")
 
@@ -36,7 +36,7 @@ class StringClass implements Type<string, StringPattern>{
     factory(): (p: StringPattern) => Type<string, StringPattern> {
         return makeString;
     }
-    generator(): Generator<string> {
+    sampler(): Sampler<string> {
         let self = this;
         let ret: () => string;
         if (isString(self.ptn)) {
@@ -49,7 +49,63 @@ class StringClass implements Type<string, StringPattern>{
         } else if (isStringArray(self.ptn)) {
             ret = () => elementOf(self.ptn as string[])
         }
-        ret[GeneratorSymbol] = true
+        ret[SamplerSymbol] = true
+        return ret;
+    }
+    differ(): Differ<StringPattern> {
+        let self = this
+        let ret: (data: any) => IterableIterator<Diff<StringPattern>>
+        if (isString(self.ptn)) {
+            function* retf(data: any) {
+                if (typeof data !== 'string' || data !== self.ptn) {
+                    return {
+                        key: [],
+                        expect: self.ptn,
+                        got: data
+                    }
+                }
+            }
+            ret = retf
+        } else if (isNumber(self.ptn)) {
+            function* retf(data: any) {
+                if (typeof data !== 'string' || data.length !== self.ptn) {
+                    return {
+                        key: [],
+                        expect: self.ptn,
+                        got: data,
+                        message: `"${data}.length != ${self.ptn}"`
+                    }
+                }
+            }
+            ret = retf
+        } else if (isRegExp(self.ptn)) {
+            function* retf(data: any) {
+                let ptn = self.ptn as RegExp;
+                if (typeof data === 'string' && ptn.test(data)) {
+                    return
+                } else if (data instanceof RegExp && data.source === ptn.source) {
+                    return
+                }
+                return {
+                    key: [],
+                    expect: ptn.source,
+                    got: data,
+                }
+            }
+            ret = retf
+        } else if (isStringArray(self.ptn)) {
+            function* retf(data: any) {
+                if (typeof data !== 'string' || (self.ptn as string[]).find(x => data === x) === undefined) {
+                    return {
+                        key: [],
+                        expect: self.ptn,
+                        got: data
+                    }
+                }
+            }
+            ret = retf
+        }
+        ret[DifferSymbol] = true;
         return ret;
     }
     matcher(): Matcher {

@@ -1,5 +1,4 @@
-import { fi } from "date-fns/locale";
-import { Generator, GeneratorSymbol, Matcher, MatcherSymbol, Type } from ".";
+import { Sampler, SamplerSymbol, Matcher, MatcherSymbol, Type, DifferSymbol, Differ, Diff } from ".";
 import { intOf } from "../random";
 export type BooleanPattern = boolean | undefined
 class BooleanClass implements Type<boolean, BooleanPattern>{
@@ -14,7 +13,7 @@ class BooleanClass implements Type<boolean, BooleanPattern>{
     factory(): (p: BooleanPattern) => Type<boolean, BooleanPattern> {
         return makeBoolean
     }
-    generator(): Generator<boolean> {
+    sampler(): Sampler<boolean> {
         let self = this;
         let ret: () => boolean
         if (self.ptn === undefined) {
@@ -22,8 +21,37 @@ class BooleanClass implements Type<boolean, BooleanPattern>{
         } else {
             ret = () => self.ptn
         }
-        ret[GeneratorSymbol] = true
+        ret[SamplerSymbol] = true
         return ret;
+    }
+    differ(): Differ<BooleanPattern> {
+        let self = this
+        let ret: (data: any) => IterableIterator<Diff<BooleanPattern>>
+        if (self.ptn === undefined) {
+            function* retf(data: any) {
+                if (typeof data !== 'boolean') {
+                    return {
+                        key: [],
+                        expect: self.ptn,
+                        got: data
+                    }
+                }
+            }
+            ret = retf
+        } else {
+            function* retf(data: any) {
+                if (typeof data !== 'boolean' || data !== self.ptn) {
+                    return {
+                        key: [],
+                        expect: self.ptn,
+                        got: data
+                    }
+                }
+            }
+            ret = retf
+        }
+        ret[DifferSymbol] = true
+        return ret
     }
     matcher(): Matcher {
         let self = this;
