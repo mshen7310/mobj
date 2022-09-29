@@ -15,7 +15,7 @@ class BooleanClass {
     factory() {
         return makeBoolean;
     }
-    generator() {
+    sampler() {
         let self = this;
         let ret;
         if (self.ptn === undefined) {
@@ -24,7 +24,37 @@ class BooleanClass {
         else {
             ret = () => self.ptn;
         }
-        ret[_1.GeneratorSymbol] = true;
+        ret[_1.SamplerSymbol] = true;
+        return ret;
+    }
+    differ() {
+        let self = this;
+        let ret;
+        if (self.ptn === undefined) {
+            function* retf(data) {
+                if (typeof data !== 'boolean') {
+                    return {
+                        key: [],
+                        expect: self.ptn,
+                        got: data
+                    };
+                }
+            }
+            ret = retf;
+        }
+        else {
+            function* retf(data) {
+                if (typeof data !== 'boolean' || data !== self.ptn) {
+                    return {
+                        key: [],
+                        expect: self.ptn,
+                        got: data
+                    };
+                }
+            }
+            ret = retf;
+        }
+        ret[_1.DifferSymbol] = true;
         return ret;
     }
     matcher() {

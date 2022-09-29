@@ -43,7 +43,7 @@ class StringClass {
     factory() {
         return makeString;
     }
-    generator() {
+    sampler() {
         let self = this;
         let ret;
         if (isString(self.ptn)) {
@@ -59,7 +59,67 @@ class StringClass {
         else if (isStringArray(self.ptn)) {
             ret = () => (0, random_1.elementOf)(self.ptn);
         }
-        ret[_1.GeneratorSymbol] = true;
+        ret[_1.SamplerSymbol] = true;
+        return ret;
+    }
+    differ() {
+        let self = this;
+        let ret;
+        if (isString(self.ptn)) {
+            function* retf(data) {
+                if (typeof data !== 'string' || data !== self.ptn) {
+                    return {
+                        key: [],
+                        expect: self.ptn,
+                        got: data
+                    };
+                }
+            }
+            ret = retf;
+        }
+        else if (isNumber(self.ptn)) {
+            function* retf(data) {
+                if (typeof data !== 'string' || data.length !== self.ptn) {
+                    return {
+                        key: [],
+                        expect: self.ptn,
+                        got: data,
+                        message: `"${data}.length != ${self.ptn}"`
+                    };
+                }
+            }
+            ret = retf;
+        }
+        else if (isRegExp(self.ptn)) {
+            function* retf(data) {
+                let ptn = self.ptn;
+                if (typeof data === 'string' && ptn.test(data)) {
+                    return;
+                }
+                else if (data instanceof RegExp && data.source === ptn.source) {
+                    return;
+                }
+                return {
+                    key: [],
+                    expect: ptn.source,
+                    got: data,
+                };
+            }
+            ret = retf;
+        }
+        else if (isStringArray(self.ptn)) {
+            function* retf(data) {
+                if (typeof data !== 'string' || self.ptn.find(x => data === x) === undefined) {
+                    return {
+                        key: [],
+                        expect: self.ptn,
+                        got: data
+                    };
+                }
+            }
+            ret = retf;
+        }
+        ret[_1.DifferSymbol] = true;
         return ret;
     }
     matcher() {

@@ -14,9 +14,24 @@ class UndefinedClass {
     factory() {
         return makeUndefined;
     }
-    generator() {
+    sampler() {
         let ret = () => undefined;
-        ret[_1.GeneratorSymbol] = true;
+        ret[_1.SamplerSymbol] = true;
+        return ret;
+    }
+    differ() {
+        let ret;
+        function* retf(data) {
+            if (data !== undefined) {
+                return {
+                    key: [],
+                    expect: undefined,
+                    got: data
+                };
+            }
+        }
+        ret = retf;
+        ret[_1.DifferSymbol] = true;
         return ret;
     }
     matcher() {

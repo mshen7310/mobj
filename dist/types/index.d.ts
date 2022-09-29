@@ -1,15 +1,24 @@
-export declare const GeneratorSymbol: unique symbol;
+import { Path } from "../path";
+export declare const SamplerSymbol: unique symbol;
 export declare const MatcherSymbol: unique symbol;
-export declare type PathItem = string | number | symbol;
-export declare function PathBuilder(): () => any;
-export declare type Diff = undefined | {} | Diff[];
+export declare const DifferSymbol: unique symbol;
+export interface Diff<T> {
+    key: Path;
+    type?: string;
+    expect: T;
+    got: any;
+    message?: string;
+}
+export declare type Differ<T> = (data?: any) => IterableIterator<Diff<T>>;
 export declare type Matcher = (data?: any) => boolean;
-export declare type Generator<T> = () => T;
+export declare type Sampler<T> = () => T;
+export declare function isDiffer<T>(f: any): f is Differ<T>;
 export declare function isMatcher(f: any): f is Matcher;
-export declare function isGenerator<T>(f: any): f is Generator<T>;
+export declare function isSampler<T>(f: any): f is Sampler<T>;
 export interface Type<T, P> {
-    generator(): Generator<T>;
+    sampler(): Sampler<T>;
     matcher(): Matcher;
+    differ(): Differ<P>;
     pattern(): P;
     factory(): (p: P) => Type<T, P>;
 }

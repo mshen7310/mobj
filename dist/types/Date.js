@@ -47,7 +47,7 @@ class DateClass {
     factory() {
         return makeDate;
     }
-    generator() {
+    sampler() {
         let self = this;
         let ret;
         if (isDate(self.ptn)) {
@@ -94,7 +94,93 @@ class DateClass {
                 return spec;
             };
         }
-        ret[_1.GeneratorSymbol] = true;
+        ret[_1.SamplerSymbol] = true;
+        return ret;
+    }
+    differ() {
+        let self = this;
+        let ret;
+        if (isDate(self.ptn)) {
+            function* retf(data) {
+                if (!(data instanceof Date) || data.getTime() !== self.ptn.getTime()) {
+                    return {
+                        key: [],
+                        expect: self.ptn,
+                        got: data
+                    };
+                }
+            }
+            ret = retf;
+        }
+        else if (isDateRange(self.ptn)) {
+            let [start, end] = self.ptn;
+            function* retf(data) {
+                if (!(data instanceof Date) || (0, fp_1.isAfter)(start, data) || (0, fp_1.isBefore)(end, data)) {
+                    return {
+                        key: [],
+                        expect: self.ptn,
+                        got: data
+                    };
+                }
+            }
+            ret = retf;
+        }
+        else if (isDateArray(self.ptn)) {
+            function* retf(data) {
+                if (!(data instanceof Date) || self.ptn.find(x => x.getTime() === data.getTime()) === undefined) {
+                    return {
+                        key: [],
+                        expect: self.ptn,
+                        got: data
+                    };
+                }
+            }
+            ret = retf;
+        }
+        else if (isDateRangeArray(self.ptn)) {
+            function* retf(data) {
+                if (data instanceof Date) {
+                    let ptn = self.ptn;
+                    for (let i = 0; i < ptn.length; ++i) {
+                        let [start, end] = ptn[i];
+                        if ((0, fp_1.isAfter)(data, start) && (0, fp_1.isBefore)(data, end)) {
+                            return;
+                        }
+                    }
+                }
+                return {
+                    key: [],
+                    expect: self.ptn,
+                    got: data
+                };
+            }
+            ret = retf;
+        }
+        else if (isDateSpec(self.ptn)) {
+            let spec = self.ptn;
+            function* retf(data) {
+                if (data instanceof Date) {
+                    let year = (typeof spec.year !== 'number' || (0, fp_1.getYear)(data) === spec.year);
+                    let month = (typeof spec.month !== 'number' || (0, fp_1.getMonth)(data) + 1 === spec.month);
+                    let date = (typeof spec.date !== 'number' || (0, fp_1.getDate)(data) === spec.date);
+                    let week = (typeof spec.week !== 'number' || (0, fp_1.getDay)(data) + 1 === spec.week);
+                    let hour = (typeof spec.hours !== 'number' || (0, fp_1.getHours)(data) === spec.hours);
+                    let minute = (typeof spec.minutes !== 'number' || (0, fp_1.getMinutes)(data) === spec.minutes);
+                    let second = (typeof spec.seconds !== 'number' || (0, fp_1.getSeconds)(data) === spec.seconds);
+                    let milliseconds = (typeof spec.milliseconds !== 'number' || (0, fp_1.getMilliseconds)(data) === spec.milliseconds);
+                    if (year && month && date && week && hour && minute && second && milliseconds) {
+                        return;
+                    }
+                }
+                return {
+                    key: [],
+                    expect: self.ptn,
+                    got: data
+                };
+            }
+            ret = retf;
+        }
+        ret[_1.DifferSymbol] = true;
         return ret;
     }
     matcher() {
@@ -108,10 +194,10 @@ class DateClass {
             ret = (datetime) => (datetime instanceof Date) && (0, fp_1.isAfter)(datetime, start) && (0, fp_1.isBefore)(datetime, end);
         }
         else if (isDateArray(self.ptn)) {
-            return (datetime) => (datetime instanceof Date) && self.ptn.find(x => x.getTime() === datetime.getTime()) !== undefined;
+            ret = (datetime) => (datetime instanceof Date) && self.ptn.find(x => x.getTime() === datetime.getTime()) !== undefined;
         }
         else if (isDateRangeArray(self.ptn)) {
-            return (datetime) => {
+            ret = (datetime) => {
                 if (datetime instanceof Date) {
                     let ptn = self.ptn;
                     for (let i = 0; i < ptn.length; ++i) {

@@ -1,4 +1,4 @@
-import { Path } from ".";
+import { Path } from "./path";
 export declare enum FieldType {
     Struct = "Struct",
     Array = "Array",
@@ -13,4 +13,3 @@ export declare type Diff = {
     } | Diff[];
     comment?: any;
 };
-export declare function diff(pattern?: any, data?: any, key?: Path): Diff | undefined;

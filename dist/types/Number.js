@@ -38,7 +38,7 @@ class NumberClass {
     factory() {
         return makeNumber;
     }
-    generator() {
+    sampler() {
         function rangeGenerator(start, end) {
             let max = Math.max(start, end);
             let min = Math.min(start, end);
@@ -65,9 +65,72 @@ class NumberClass {
         else if (isNumberArray(self.ptn)) {
             ret = () => (0, random_1.elementOf)(self.ptn);
         }
-        ret[_1.GeneratorSymbol] = true;
+        ret[_1.SamplerSymbol] = true;
         return ret;
     }
+    differ() {
+        let self = this;
+        let ret;
+        if (typeof self.ptn === 'number') {
+            function* retf(data) {
+                if (typeof data !== 'number' || data !== self.ptn) {
+                    return {
+                        key: [],
+                        expect: self.ptn,
+                        got: data
+                    };
+                }
+            }
+            ret = retf;
+        }
+        else if (isNumberRange(self.ptn)) {
+            function* retf(data) {
+                let [start, end] = self.ptn;
+                if (typeof data !== 'number' || data > end || data < start) {
+                    return {
+                        key: [],
+                        expect: self.ptn,
+                        got: data
+                    };
+                }
+            }
+            ret = retf;
+        }
+        else if (isNumberArray(self.ptn)) {
+            function* retf(data) {
+                if (typeof data !== 'number' || self.ptn.find(x => x === data) === undefined) {
+                    return {
+                        key: [],
+                        expect: self.ptn,
+                        got: data
+                    };
+                }
+            }
+            ret = retf;
+        }
+        else if (isNumberRangeArray(self.ptn)) {
+            function* retf(data) {
+                if (typeof data === 'number') {
+                    let ptn = self.ptn;
+                    for (let i = 0; i < ptn.length; ++i) {
+                        let [start, end] = ptn[i];
+                        if (data >= start && data <= end) {
+                            return;
+                        }
+                    }
+                }
+                return {
+                    key: [],
+                    expect: self.ptn,
+                    got: data
+                };
+            }
+            ret = retf;
+        }
+        ret[_1.DifferSymbol] = true;
+        return ret;
+    }
+    //matcher might be redundent
     matcher() {
         let self = this;
         let ret;

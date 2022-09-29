@@ -46,14 +46,30 @@ class SymbolClass {
     factory() {
         return makeSymbol;
     }
-    generator() {
+    sampler() {
         let ptn = this.getPatternArray();
         let ret = () => (0, random_1.elementOf)(ptn);
-        ret[_1.GeneratorSymbol] = true;
+        ret[_1.SamplerSymbol] = true;
+        return ret;
+    }
+    differ() {
+        let self = this;
+        let ptn = this.getPatternArray();
+        let ret;
+        function* retf(data) {
+            if (typeof data !== 'symbol' || ptn.find(x => x === data) === undefined) {
+                return {
+                    key: [],
+                    expect: self.ptn,
+                    got: data
+                };
+            }
+        }
+        ret = retf;
+        ret[_1.DifferSymbol] = true;
         return ret;
     }
     matcher() {
-        let self = this;
         let ptn = this.getPatternArray();
         let ret = (data) => typeof data === 'symbol' && ptn.find(x => x === data) !== undefined;
         ret[_1.MatcherSymbol] = true;

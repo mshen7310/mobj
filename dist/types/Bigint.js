@@ -38,7 +38,7 @@ class BigintClass {
     factory() {
         return makeBigint;
     }
-    generator() {
+    sampler() {
         function rangeGenerator(start, end) {
             let max = start > end ? start : end;
             let min = start < end ? start : end;
@@ -60,7 +60,69 @@ class BigintClass {
         else if (isBigintArray(self.ptn)) {
             ret = () => (0, random_1.elementOf)(self.ptn);
         }
-        ret[_1.GeneratorSymbol] = true;
+        ret[_1.SamplerSymbol] = true;
+        return ret;
+    }
+    differ() {
+        let self = this;
+        let ret;
+        if (typeof self.ptn === 'bigint') {
+            function* retf(data) {
+                if (typeof data !== 'bigint' || data !== self.ptn) {
+                    return {
+                        key: [],
+                        expect: self.ptn,
+                        got: data
+                    };
+                }
+            }
+            ret = retf;
+        }
+        else if (isBigintRange(self.ptn)) {
+            let [start, end] = self.ptn;
+            function* retf(data) {
+                if (typeof data !== 'bigint' || data < start || data > end) {
+                    return {
+                        key: [],
+                        expect: self.ptn,
+                        got: data
+                    };
+                }
+            }
+            ret = retf;
+        }
+        else if (isBigintRangeArray(self.ptn)) {
+            function* retf(data) {
+                if (typeof data === 'bigint') {
+                    let ptn = self.ptn;
+                    for (let i = 0; i < ptn.length; ++i) {
+                        let [start, end] = ptn[i];
+                        if (data >= start && data <= end) {
+                            return;
+                        }
+                    }
+                }
+                return {
+                    key: [],
+                    expect: self.ptn,
+                    got: data
+                };
+            }
+            ret = retf;
+        }
+        else if (isBigintArray(self.ptn)) {
+            function* retf(data) {
+                if (typeof data !== 'bigint' || self.ptn.find(x => x === data) === undefined) {
+                    return {
+                        key: [],
+                        expect: self.ptn,
+                        got: data
+                    };
+                }
+            }
+            ret = retf;
+        }
+        ret[_1.DifferSymbol] = true;
         return ret;
     }
     matcher() {
