@@ -4,4 +4,4 @@ export declare enum CompareResult {
     BiggerThan = 1,
     Equal = 0
 }
-export declare function comparator(...path: Path): (a: any, b: any) => CompareResult;
+export declare function comparator(...p: Path): (a: any, b: any) => CompareResult;

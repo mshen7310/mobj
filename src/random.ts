@@ -114,7 +114,7 @@ export function bigintOf(start: bigint, end?: bigint): bigint {
     const differenceLength = difference.toString().length;
     let multiplier = '';
     while (multiplier.length < differenceLength) {
-        multiplier += Math.random()
+        multiplier += random()
             .toString()
             .split('.')[1];
     }

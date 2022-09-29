@@ -8,10 +8,10 @@ var CompareResult;
     CompareResult[CompareResult["BiggerThan"] = 1] = "BiggerThan";
     CompareResult[CompareResult["Equal"] = 0] = "Equal";
 })(CompareResult = exports.CompareResult || (exports.CompareResult = {}));
-function comparator(...path) {
+function comparator(...p) {
     return (a, b) => {
-        let aa = (0, path_1.get)(a, ...path);
-        let bb = (0, path_1.get)(b, ...path);
+        let aa = (0, path_1.path)(...p)()(a)[0];
+        let bb = (0, path_1.path)(...p)()(b)[0];
         if (aa < bb) {
             // console.log(aa, '<', bb)
             return CompareResult.LessThan;

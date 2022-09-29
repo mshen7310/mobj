@@ -127,7 +127,7 @@ function bigintOf(start, end) {
     const differenceLength = difference.toString().length;
     let multiplier = '';
     while (multiplier.length < differenceLength) {
-        multiplier += Math.random()
+        multiplier += random()
             .toString()
             .split('.')[1];
     }

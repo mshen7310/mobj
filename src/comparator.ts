@@ -1,14 +1,14 @@
-import { Path, get } from "./path";
+import { Path, path } from "./path";
 
 export enum CompareResult {
     LessThan = -1,
     BiggerThan = 1,
     Equal = 0
 }
-export function comparator(...path: Path): (a: any, b: any) => CompareResult {
+export function comparator(...p: Path): (a: any, b: any) => CompareResult {
     return (a: any, b: any) => {
-        let aa = get(a, ...path)
-        let bb = get(b, ...path)
+        let aa = path(...p)()(a)[0]
+        let bb = path(...p)()(b)[0]
         if (aa < bb) {
             // console.log(aa, '<', bb)
             return CompareResult.LessThan;

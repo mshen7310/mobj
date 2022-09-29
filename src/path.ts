@@ -113,11 +113,10 @@ export function path(...P: Path): any {
             } else {
                 let ret = all_path
                 all_path = [...P]
-                let Fn = function (obj: any) { return get(obj, ...ret) }
-                Fn['path'] = [...ret]
-                Fn.prototype.toString = function () {
-                    return `Path<${ret.toString()}>(object: any): any`
+                function Fn(obj: any) {
+                    return Array.from(get(obj, ...ret))
                 }
+                Fn['path'] = [...ret]
                 return Fn
             }
         },
@@ -160,10 +159,10 @@ if (require.main == module) {
     p = path()
     let y = p.work.kkk('hello', (v, k, p) => {
         if (k === 'world') {
-            return [v, k, p]
+            return [{ a: 1, b: 2 }, k, p]
         } else {
             return []
         }
-    }).d[0]()
-    console.log(2, y, Array.from(y(data)))
+    }).b((v) => v * 2)()
+    console.log(2, y, y(), y(data))
 }
