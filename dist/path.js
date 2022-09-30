@@ -1,85 +1,97 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.path = exports.get = exports.descendant = void 0;
-const PropertyWalkerSymbol = Symbol.for('PropertyWalkerSymbol');
-function descendant(fn = (v, k, p) => [v, k, p], depth = 1) {
-    let retFn = function* (value) {
-        switch (typeof value) {
+const WalkerSymbol = Symbol.for('WalkerSymbol');
+function descendant(fn = (value, path, root) => value, depth = 1) {
+    function* walk(v, p, r) {
+        let value = fn(v, p, r);
+        if (value === undefined) {
+            yield {
+                path: []
+            };
+        }
+        else if (typeof depth === 'number' && depth > 1) {
+            for (let tmp of descendant(fn, depth - 1)(value)) {
+                yield {
+                    value: tmp.value,
+                    path: [p, ...tmp.path],
+                    root: value
+                };
+            }
+        }
+        else {
+            yield {
+                value,
+                path: [p],
+                root: r
+            };
+        }
+    }
+    let retFn = function* (obj) {
+        switch (typeof obj) {
             case 'object': {
-                if (value instanceof Map) {
-                    for (let [k, v] of value) {
-                        let [fv, fk, fp] = [].concat(fn(v, k, value));
-                        if (fv !== undefined && typeof depth === 'number' && depth > 1) {
-                            let walk = descendant(fn, depth - 1);
-                            yield* walk(fv);
-                        }
-                        else {
-                            yield [fv, fk, fp];
-                        }
+                if (obj instanceof Map) {
+                    for (let [k, v] of obj) {
+                        yield* walk(v, k, obj);
                     }
                 }
-                else if (value instanceof Set) {
-                    for (let v of value) {
-                        let [fv, fk, fp] = [].concat(fn(v, undefined, value));
-                        if (fv !== undefined && typeof depth === 'number' && depth > 1) {
-                            let walk = descendant(fn, depth - 1);
-                            yield* walk(fv);
-                        }
-                        else {
-                            yield [fv, fk, fp];
-                        }
+                else if (obj instanceof Set) {
+                    for (let v of obj) {
+                        yield* walk(v, undefined, obj);
                     }
                 }
-                else if (Array.isArray(value)) {
-                    for (let k = 0; k < value.length; ++k) {
-                        let [fv, fk, fp] = [].concat(fn(value[k], k, value));
-                        if (fv !== undefined && typeof depth === 'number' && depth > 1) {
-                            let walk = descendant(fn, depth - 1);
-                            yield* walk(fv);
-                        }
-                        else {
-                            yield [fv, fk, fp];
-                        }
+                else if (Array.isArray(obj)) {
+                    for (let k = 0; k < obj.length; ++k) {
+                        yield* walk(obj[k], k, obj);
                     }
                 }
-                else if (value !== null) {
-                    for (let k of Reflect.ownKeys(value)) {
-                        let [fv, fk, fp] = [].concat(fn(value[k], k, value));
-                        if (fv !== undefined && typeof depth === 'number' && depth > 1) {
-                            let walk = descendant(fn, depth - 1);
-                            yield* walk(fv);
-                        }
-                        else {
-                            yield [fv, fk, fp];
-                        }
+                else if (obj !== null
+                    && !(obj instanceof Date)
+                    && !(obj instanceof RegExp)) {
+                    for (let k of Reflect.ownKeys(obj)) {
+                        yield* walk(obj[k], k, obj);
                     }
                 }
                 else {
-                    yield [].concat(fn(value));
+                    yield {
+                        value: fn(obj),
+                        path: []
+                    };
                 }
                 break;
             }
             default: {
-                yield [].concat(fn(value));
+                yield {
+                    value: fn(obj),
+                    path: []
+                };
             }
         }
     };
-    retFn[PropertyWalkerSymbol] = true;
+    retFn[WalkerSymbol] = true;
     return retFn;
 }
 exports.descendant = descendant;
-function isPathWalker(fn) {
-    return typeof fn === 'function' && fn[PropertyWalkerSymbol] === true;
+function isWalker(fn) {
+    return typeof fn === 'function' && fn[WalkerSymbol] === true;
 }
 function* get(obj, ...path) {
-    if (obj !== undefined && obj !== null) {
+    if (obj === null) {
+        yield { value: null, path: [] };
+    }
+    else if (obj !== undefined) {
         let [current, ...rest] = path;
         switch (typeof current) {
             case 'function': {
-                if (isPathWalker(current)) {
-                    for (let [v, _k, _p] of current(obj)) {
-                        if (v !== undefined) {
-                            yield* get(v, ...rest);
+                if (isWalker(current)) {
+                    for (let { value, path } of current(obj)) {
+                        if (value !== undefined) {
+                            for (let tmp of get(value, ...rest)) {
+                                yield {
+                                    value: tmp.value,
+                                    path: [...path, ...tmp.path]
+                                };
+                            }
                         }
                     }
                 }
@@ -91,16 +103,20 @@ function* get(obj, ...path) {
             case 'string':
             case 'symbol':
             case 'number': {
-                yield* get(obj[current], ...rest);
+                for (let tmp of get(obj[current], ...rest)) {
+                    yield {
+                        value: tmp.value,
+                        path: [current, ...tmp.path]
+                    };
+                }
                 break;
             }
             case 'undefined': {
-                yield obj;
+                yield { value: obj, path: [] };
                 break;
             }
         }
     }
-    return obj;
 }
 exports.get = get;
 function path(...P) {
@@ -109,7 +125,7 @@ function path(...P) {
         apply(target, thisArg, argumentsList) {
             if (argumentsList.length > 0) {
                 all_path = all_path.concat(argumentsList.map(x => {
-                    if (!isPathWalker(x) && typeof x === 'function') {
+                    if (!isWalker(x) && typeof x === 'function') {
                         return descendant(x);
                     }
                     return x;
@@ -166,10 +182,7 @@ if (require.main == module) {
     p = path();
     let y = p.work.kkk('hello', (v, k, p) => {
         if (k === 'world') {
-            return [{ a: 1, b: 2 }, k, p];
-        }
-        else {
-            return [];
+            return { a: 1, b: 2 };
         }
     }).b((v) => v * 2)();
     console.log(2, y, y(), y(data));
