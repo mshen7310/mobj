@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.initRandomSeed = exports.numberOf = exports.elementOf = exports.intOf = exports.bigintOf = exports.anyOf = exports.seed = void 0;
+exports.initRandomSeed = exports.random = exports.numberOf = exports.elementOf = exports.intOf = exports.bigintOf = exports.anyOf = void 0;
 function seed(s = 'random', alg = 3) {
     function cyrb128(str) {
         let h1 = 1779033703, h2 = 3144134277, h3 = 1013904242, h4 = 2773480762;
@@ -101,33 +101,26 @@ function seed(s = 'random', alg = 3) {
         };
     }
 }
-exports.seed = seed;
 function anyOf(...arg) {
-    let index = intOf(0, arg.length);
-    if (index === arg.length) {
-        index -= 1;
-    }
-    if (index < 0) {
-        index = 0;
-    }
-    return arg[index];
+    return arg[intOf(0, arg.length - 1)];
 }
 exports.anyOf = anyOf;
 function bigintOf(start, end) {
     if (end === undefined) {
-        end = start > 0n ? start : 0n;
-        start = start > 0n ? 0n : start;
+        end = start > BigInt(0) ? start : BigInt(0);
+        start = start > BigInt(0) ? BigInt(0) : start;
     }
     if (start > end) {
         let tmp = start;
         start = end;
         end = tmp;
     }
+    end += BigInt(1);
     const difference = end - start;
     const differenceLength = difference.toString().length;
     let multiplier = '';
     while (multiplier.length < differenceLength) {
-        multiplier += random()
+        multiplier += (0, exports.random)()
             .toString()
             .split('.')[1];
     }
@@ -147,7 +140,7 @@ function intOf(start, end) {
         start = end;
         end = tmp;
     }
-    return start + Math.round(random() * (end - start));
+    return start + Math.round((0, exports.random)() * (end - start));
 }
 exports.intOf = intOf;
 function elementOf(array) {
@@ -169,11 +162,11 @@ function numberOf(start, end) {
         start = end;
         end = tmp;
     }
-    return start + random() * (end - start);
+    return start + (0, exports.random)() * (end - start);
 }
 exports.numberOf = numberOf;
-var random = seed();
+exports.random = seed();
 function initRandomSeed(x = 'random', alg = 3) {
-    random = seed(x, alg);
+    return exports.random = seed(x, alg);
 }
 exports.initRandomSeed = initRandomSeed;

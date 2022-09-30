@@ -1,5 +1,5 @@
 
-export function seed(s: string | number = 'random', alg: 0 | 1 | 2 | 3 = 3) {
+function seed(s: string | number | null = 'random', alg: 0 | 1 | 2 | 3 = 3): () => number {
     function cyrb128(str: string) {
         let h1 = 1779033703, h2 = 3144134277,
             h3 = 1013904242, h4 = 2773480762;
@@ -90,26 +90,20 @@ export function seed(s: string | number = 'random', alg: 0 | 1 | 2 | 3 = 3) {
 }
 
 export function anyOf(...arg: any): any {
-    let index = intOf(0, arg.length)
-    if (index === arg.length) {
-        index -= 1
-    }
-    if (index < 0) {
-        index = 0
-    }
-    return arg[index]
+    return arg[intOf(0, arg.length - 1)]
 }
 
 export function bigintOf(start: bigint, end?: bigint): bigint {
     if (end === undefined) {
-        end = start > 0n ? start : 0n
-        start = start > 0n ? 0n : start
+        end = start > BigInt(0) ? start : BigInt(0)
+        start = start > BigInt(0) ? BigInt(0) : start
     }
     if (start > end) {
         let tmp = start
         start = end;
         end = tmp;
     }
+    end += BigInt(1)
     const difference: bigint = end - start;
     const differenceLength = difference.toString().length;
     let multiplier = '';
@@ -136,7 +130,7 @@ export function intOf(start: number, end?: number): number {
     }
     return start + Math.round(random() * (end - start))
 }
-export function elementOf(array: any[]): any {
+export function elementOf(array: any): any {
     if (Array.isArray(array)) {
         return array[intOf(array.length - 1)]
     } else if (array && typeof array === 'object') {
@@ -156,8 +150,8 @@ export function numberOf(start: number, end?: number): number {
     }
     return start + random() * (end - start)
 }
-var random = seed()
 
-export function initRandomSeed(x: string | number = 'random', alg: 0 | 1 | 2 | 3 = 3) {
-    random = seed(x, alg)
+export let random = seed()
+export function initRandomSeed(x: string | number = 'random', alg: 0 | 1 | 2 | 3 = 3): () => number {
+    return random = seed(x, alg)
 }

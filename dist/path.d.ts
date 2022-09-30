@@ -4,9 +4,10 @@ export interface Variable {
     root?: object;
 }
 export declare type Walker = (value: any) => Generator<Variable>;
-export declare type PathItem = string | number | symbol | Walker;
+export declare type PathItem = string | number | symbol | Walker | MapFilter;
 export declare type Path = PathItem[];
-export declare type MapFilterFn = (value: any, key?: Exclude<PathItem, Walker>, parent?: any) => any;
-export declare function descendant(fn?: MapFilterFn, depth?: number | any): (a: any) => Generator<Variable>;
-export declare function get(obj: any, ...path: Path): Generator<Variable>;
+export declare type MapFilterResult = void | [any];
+export declare type MapFilter = (value: any, key?: string | number | symbol, parent?: object) => MapFilterResult;
+export declare function identical(value: any): [any];
+export declare function descendant(fn?: MapFilter, depth?: number): (a: any) => Generator<Variable>;
 export declare function path(...P: Path): any;
