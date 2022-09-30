@@ -23,20 +23,18 @@ function isWalkable(v: any): boolean {
     return typeof v === 'object' && v !== null && !(v instanceof Date) && !(v instanceof RegExp)
 }
 function assertMapFilter(array, ...location: any[]) {
-    let at = location.map(x => x.toString()).join(' ')
     if (array !== undefined && !(Array.isArray(array) && array.length === 1)) {
-        throw Error(`Invalid return value of MapFilter, MapFilter =>> ${array}${at.length > 0 ? ' at ' + at : ''}`)
+        let fn = location.map(x => x.toString()).join(' ')
+        let err = new TypeError(`Invalid result of MapFilter, should return "undefined | [any]"`)
+        err['MapFilter'] = fn
+        err['return'] = array
+        throw err
     }
     return array
 }
 function* walk(depth: number, fn: MapFilter, v: any, p: Exclude<PathItem, Walker | MapFilter>, r: any): Generator<Variable> {
-    let array = assertMapFilter(fn(v, p, r), 1)
+    let array = assertMapFilter(fn(v, p, r), fn)
     if (array != undefined) {
-        // console.log({
-        //     value: array[0],
-        //     path: [p],
-        //     root: r
-        // })
         yield {
             value: array[0],
             path: [p],
@@ -77,16 +75,13 @@ export function descendant(fn: MapFilter = identical, depth: number = 1): (a: an
                 for (let k = 0; k < obj.length; ++k) {
                     yield* walk(depth, fn, obj[k], k, obj)
                 }
-            } else if (obj !== null
-                && !(obj instanceof Date)
-                && !(obj instanceof RegExp)
-            ) {
+            } else {
                 for (let k of Reflect.ownKeys(obj)) {
                     yield* walk(depth, fn, obj[k], k, obj)
                 }
             }
         } else {
-            let array = assertMapFilter(fn(obj), 2, fn)
+            let array = assertMapFilter(fn(obj), fn)
             if (array !== undefined) {
                 yield {
                     value: array[0],
@@ -100,7 +95,7 @@ export function descendant(fn: MapFilter = identical, depth: number = 1): (a: an
 }
 
 
-export function* get(obj: any, ...path: Exclude<PathItem, MapFilter>[]): Generator<Variable> {
+function* get(obj: any, ...path: Exclude<PathItem, MapFilter>[]): Generator<Variable> {
     if (obj !== undefined) {
         let [current, ...rest] = path;
         switch (typeof current) {
@@ -126,7 +121,11 @@ export function* get(obj: any, ...path: Exclude<PathItem, MapFilter>[]): Generat
             case 'string':
             case 'symbol':
             case 'number': {
-                for (let tmp of get(obj[current], ...rest)) {
+                let new_root = obj[current]
+                if (obj instanceof Map) {
+                    new_root = obj.get(current)
+                }
+                for (let tmp of get(new_root, ...rest)) {
                     yield {
                         value: tmp.value,
                         path: [current, ...tmp.path]
