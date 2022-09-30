@@ -1,52 +1,56 @@
-
-// export type Predicate = (...arg: any[]) => boolean
 export interface Variable {
     path?: Exclude<PathItem, Walker>[]
     value?: any
     root?: object
 }
 
-// export class Env {
-//     private readonly env: Map<string, Variable>
-//     constructor() {
-//         this.env = new Map<string, Variable>()
-//     }
-//     variable(name: string): Variable {
-//         if (!this.env.has(name)) {
-//             this.env.set(name, { path: [] })
-//         }
-//         return this.env.get(name)
-//     }
-// }
-// export function env(): Env {
-//     return new Env()
-// }
 
 export type Walker = (value: any) => Generator<Variable>
-export type PathItem = string | number | symbol | Walker
+export type PathItem = string | number | symbol | Walker | MapFilter
 export type Path = PathItem[]
+export type MapFilterResult = void | [any]
+export type MapFilter = (value: any, key?: string | number | symbol, parent?: object) => MapFilterResult
 
-export type MapFilterFn = (value: any, key?: Exclude<PathItem, Walker>, parent?: any) => any
-export function identical(v: any): any {
-    return v
+export function identical(value: any): [any] {
+    return [value]
 }
 const WalkerSymbol = Symbol.for('WalkerSymbol')
+
+function isWalker(fn: any) {
+    return typeof fn === 'function' && fn[WalkerSymbol] === true
+}
 function isWalkable(v: any): boolean {
     return typeof v === 'object' && v !== null && !(v instanceof Date) && !(v instanceof RegExp)
 }
-
-function* walk(depth: number, fn: MapFilterFn, v: any, p: Exclude<PathItem, Walker>, r: any): Generator<Variable> {
-    let value = fn(v, p, r)
-    if (value !== undefined) {
+function assertMapFilter(array, ...location: any[]) {
+    let at = location.map(x => x.toString()).join(' ')
+    if (array !== undefined && !(Array.isArray(array) && array.length === 1)) {
+        throw Error(`Invalid return value of MapFilter, MapFilter =>> ${array}${at.length > 0 ? ' at ' + at : ''}`)
+    }
+    return array
+}
+function* walk(depth: number, fn: MapFilter, v: any, p: Exclude<PathItem, Walker | MapFilter>, r: any): Generator<Variable> {
+    let array = assertMapFilter(fn(v, p, r), 1)
+    if (array != undefined) {
+        // console.log({
+        //     value: array[0],
+        //     path: [p],
+        //     root: r
+        // })
         yield {
-            value,
+            value: array[0],
             path: [p],
             root: r
         }
     }
     if (depth === Infinity || depth > 1) {
-        let new_root = isWalkable(value) ? value : v
-        if (isWalkable(new_root)) {
+        // continue the search from new_root's descendants
+        // if the current data item(v) didn't pass the filter(array === undefined), try it's descendants
+        // if the current data item(v) did pass the filter(array !== undefined), try the descendants of the mapped data item(array[0])
+        // if the mapped data item(array[0]) is not walkable, then try the current data item(v)
+        let new_root = array === undefined ? v : isWalkable(array[0]) ? array[0] : v
+        // proceed when new_root is walkable and new_root is not the parent
+        if (isWalkable(new_root) && new_root !== r) {
             for (let tmp of descendant(fn, depth - 1)(new_root)) {
                 yield {
                     value: tmp.value,
@@ -58,7 +62,7 @@ function* walk(depth: number, fn: MapFilterFn, v: any, p: Exclude<PathItem, Walk
     }
 }
 
-export function descendant(fn: MapFilterFn = identical, depth: number = 1): (a: any) => Generator<Variable> {
+export function descendant(fn: MapFilter = identical, depth: number = 1): (a: any) => Generator<Variable> {
     let retFn = function* (obj: any): Generator<Variable> {
         if (isWalkable(obj)) {
             if (obj instanceof Map) {
@@ -82,9 +86,12 @@ export function descendant(fn: MapFilterFn = identical, depth: number = 1): (a: 
                 }
             }
         } else {
-            yield {
-                value: fn(obj),
-                path: []
+            let array = assertMapFilter(fn(obj), 2, fn)
+            if (array !== undefined) {
+                yield {
+                    value: array[0],
+                    path: []
+                }
             }
         }
     }
@@ -92,30 +99,27 @@ export function descendant(fn: MapFilterFn = identical, depth: number = 1): (a: 
     return retFn;
 }
 
-function isWalker(fn: any) {
-    return typeof fn === 'function' && fn[WalkerSymbol] === true
-}
 
-export function* get(obj: any, ...path: Path): Generator<Variable> {
-    if (obj === null) {
-        yield { value: null, path: [] }
-    } else if (obj !== undefined) {
+export function* get(obj: any, ...path: Exclude<PathItem, MapFilter>[]): Generator<Variable> {
+    if (obj !== undefined) {
         let [current, ...rest] = path;
         switch (typeof current) {
             case 'function': {
-                if (isWalker(current)) {
-                    for (let { value, path } of current(obj)) {
-                        if (value !== undefined) {
-                            for (let tmp of get(value, ...rest)) {
-                                yield {
-                                    value: tmp.value,
-                                    path: [...path, ...tmp.path]
-                                }
+                for (let { value, path } of current(obj)) {
+                    if (value !== undefined) {
+                        // if the intermedia data item(value) is not undefined
+                        // handle the rest component of path after 'current' function call
+                        for (let tmp of get(value, ...rest)) {
+                            yield {
+                                value: tmp.value,
+                                path: [...path, ...tmp.path]
                             }
                         }
+                    } else if (rest.length === 0) {
+                        yield {
+                            value, path
+                        }
                     }
-                } else {
-                    throw Error(`${current} is an invalid path component`)
                 }
                 break;
             }
@@ -139,16 +143,17 @@ export function* get(obj: any, ...path: Path): Generator<Variable> {
 }
 
 export function path(...P: Path): any {
-    let all_path = [...P]
+    function convert_MapFilterFn(x: any): any {
+        if (!isWalker(x) && typeof x === 'function') {
+            return descendant(x)
+        }
+        return x;
+    }
+    let all_path = P.map(convert_MapFilterFn)
     let retFn = new Proxy(() => { }, {
         apply(target, thisArg, argumentsList) {
             if (argumentsList.length > 0) {
-                all_path = all_path.concat(argumentsList.map(x => {
-                    if (!isWalker(x) && typeof x === 'function') {
-                        return descendant(x)
-                    }
-                    return x;
-                }))
+                all_path = all_path.concat(argumentsList.map(convert_MapFilterFn))
                 return retFn
             } else {
                 let ret = all_path
@@ -173,30 +178,3 @@ export function path(...P: Path): any {
     return retFn;
 }
 
-if (require.main == module) {
-    const data = {
-        hello: {
-            world: 'hello world'
-        },
-        work: {
-            kkk: {
-                hello: {
-                    world: {
-                        a: [1, 2, 3],
-                        b: ['a', 'b', 'c'],
-                        d: [{
-                            k: 'k',
-                            z: 'z'
-                        }]
-                    }
-                }
-            }
-        }
-    }
-    let y = path().work.kkk('hello', (v, k, p) => {
-        if (k === 'world') {
-            return { a: 1, b: 2 }
-        }
-    }).b((v) => v * 2)()
-    console.log(2, y, y(), y(data))
-}
