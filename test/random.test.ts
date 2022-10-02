@@ -152,8 +152,9 @@ describe('bigintOf', () => {
     it(`should return a number between [0, start]`, () => {
         let tmp = [...Array(11).keys()].sort().map(i => BigInt(i))
         let result = []
+        let start: bigint = BigInt(tmp.length - 1)
         for (let i = 0; i < 200; ++i) {
-            result.push(bigintOf(BigInt(tmp.length - 1)))
+            result.push(bigintOf(start))
         }
         assert.deepEqual([...new Set(result)].sort(), tmp)
     })
