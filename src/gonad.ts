@@ -22,9 +22,7 @@ export function lift(arg: any): GeneratorFn {
         return function* (...anything: any[]) {
             let ret = arg(...anything)
             if (isGenerator(ret)) {
-                for (let x of ret) {
-                    yield x
-                }
+                yield* ret
             } else {
                 yield ret
             }
@@ -36,8 +34,8 @@ export function lift(arg: any): GeneratorFn {
     }
 }
 
-export function filter<T>(p: PredicateFn<T>): GeneratorFn<T> {
-    return function* (gen: GeneratorFn<T>, ...arg: any[]) {
+export function filter<T = any>(p: PredicateFn<T>): GeneratorFn<T> {
+    return function* (gen: any, ...arg: any[]) {
         let g = lift(gen)
         for (let x of g(...arg)) {
             if (p(x)) {
@@ -47,51 +45,11 @@ export function filter<T>(p: PredicateFn<T>): GeneratorFn<T> {
     }
 }
 
-export function map<T, R>(t: TransformFn<T, R>): GeneratorFn<R> {
-    return function* (gen: GeneratorFn<T>, ...arg: any[]) {
+export function map<T = any, R = any>(t: TransformFn<T, R>): GeneratorFn<R> {
+    return function* (gen: any, ...arg: any[]) {
         let g = lift(gen)
         for (let x of g(...arg)) {
             yield t(x)
-        }
-    }
-}
-function isWalkable(v: any): boolean {
-    return typeof v === 'object' && v !== null && !(v instanceof Date) && !(v instanceof RegExp)
-}
-
-export interface Property {
-    value: any
-    key?: any
-    parent?: any
-}
-
-export function* from(arg?: any): Generator<Property> {
-    switch (typeof arg) {
-        case 'object': {
-            if (arg instanceof Map) {
-                for (let [k, v] of arg) {
-                    yield { value: v, key: k, parent: arg }
-                }
-                break;
-            } else if (arg instanceof Set) {
-                for (let v of arg) {
-                    yield { value: v, parent: arg }
-                }
-                break;
-            } else if (Array.isArray(arg)) {
-                for (let i = 0; i < arg.length; ++i) {
-                    yield { value: arg[i], key: i, parent: arg }
-                }
-                break;
-            } else if (isWalkable(arg)) {
-                for (let k of Reflect.ownKeys(arg)) {
-                    yield { value: arg[k], key: k, parent: arg }
-                }
-                break;
-            }
-        }
-        default: {
-            yield { value: arg }
         }
     }
 }
