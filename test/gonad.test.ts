@@ -1,51 +1,7 @@
-import { filter, map, lift, isGenerator } from '../src/gonad'
+import { filter, map, isGenerator, chain, mapFilter } from '../src/gonad'
 import 'mocha'
 import { strict as assert } from 'node:assert';
 
-describe('lift', () => {
-    it('should lift []', () => {
-        let g = lift([1, 2, 3])
-        let tmp = Array.from(g())
-        assert.deepEqual(tmp, [1, 2, 3])
-    })
-    it('should lift generator function', () => {
-        let src = function* () {
-            yield 1
-            yield 2
-            yield 3
-        }
-        let g = lift(src)
-        let tmp = Array.from(g())
-        assert.deepEqual(tmp, [1, 2, 3])
-    })
-    it('should lift generator', () => {
-        let src = function* () {
-            yield 1
-            yield 2
-            yield 3
-        }
-        let g = lift(src())
-        let tmp = Array.from(g())
-        assert.deepEqual(tmp, [1, 2, 3])
-    })
-    it('should lift value', () => {
-        let src = function () {
-            return 1
-        }
-        let g = lift(src())
-        let tmp = Array.from(g())
-        assert.deepEqual(tmp, [1])
-    })
-    it('should lift function', () => {
-        let src = function () {
-            return 1
-        }
-        let g = lift(src)
-        let tmp = Array.from(g())
-        assert.deepEqual(tmp, [1])
-    })
-
-})
 
 describe('isGenerator', () => {
     it('should return true for []', () => {
@@ -113,3 +69,68 @@ describe('filter', () => {
         ])
     })
 })
+
+describe('mapFilter', () => {
+    it('should mapFilter []', () => {
+        let src = [1, 2, 3]
+        let f = mapFilter((x: number) => {
+            if (x === 1) {
+                return [`${x * 2}hello`]
+            }
+        })
+        let tmp = Array.from(f(src))
+        assert.deepEqual(tmp, [
+            '2hello',
+        ])
+    })
+    it('should mapFilter {}', () => {
+        let src = { a: 1, b: 2, c: 3 }
+        let f = mapFilter(([k, v]) => {
+            if (k === 'a') {
+                return [{ k, v }]
+            }
+        })
+        let tmp = Array.from(f(Object.entries(src)))
+        assert.deepEqual(tmp, [
+            { k: 'a', v: 1 },
+        ])
+    })
+})
+
+describe('chain', () => {
+    it('should chain map1, map2, filter1, filter2', () => {
+        let src = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+        let f = chain(
+            map(x => x + 1)
+            , filter(x => (x % 2) === 0)
+            , map(x => `${x}hello`)
+            , map(x => x.toUpperCase()))
+        let tmp = Array.from(f(src))
+        assert.deepEqual(tmp, [
+            '2HELLO',
+            '4HELLO',
+            '6HELLO',
+            '8HELLO',
+            '10HELLO',
+        ])
+    })
+    it('should chain filter, map, mapFilter over {}', () => {
+        let src = { a: 1, b: 2, c: 3, d: 4 }
+        let f = chain(
+            'should omit any non-function elements' as any
+            , filter(([k, v]) => (v % 2) === 0)
+            , map(([k, v]) => ({ k, v }))
+            , mapFilter(({ k, v }) => {
+                if (k === 'b') {
+                    return [v * 2]
+                }
+            })
+            , 'should omit any non-function elements' as any
+        )
+        let tmp = Array.from(f(Object.entries(src)))
+        assert.deepEqual(tmp, [
+            4,
+        ])
+    })
+})
+

@@ -1,4 +1,4 @@
-import { GeneratorFn, lift } from "./gonad"
+import { GeneratorFn } from "./gonad"
 
 export function isWalkable(v: any): boolean {
     return typeof v === 'object'
