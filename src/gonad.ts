@@ -5,8 +5,7 @@ export type PredicateFn<T = any> = (arg: T) => boolean
 export type TransformFn<T = any, R = any> = (arg: T) => R
 export type TranspredFn<T = any, R = any> = (arg: T) => [R]
 
-
-export function isGenerator(fn: any): boolean {
+export function isGenerator(fn: any): fn is Generator {
     return fn !== undefined
         && fn !== null
         && typeof fn === 'object'

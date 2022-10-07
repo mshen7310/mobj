@@ -1,6 +1,7 @@
-import { GeneratorFn } from "./gonad"
+import { Environment } from "./environment"
 
-export function isWalkable(v: any): boolean {
+export type Walkable = object
+export function isWalkable(v: any): v is Walkable {
     return typeof v === 'object'
         && v !== null
         && !(v instanceof Date)
@@ -22,54 +23,140 @@ export function isWalkable(v: any): boolean {
         && !(v instanceof TransformStream)
         && !(v instanceof Promise)
 }
+export type Path = symbol | number | string | WalkerFn
+export type Property = any
+export type WalkerFn = (value: any, env: Environment) => Property
+export type Walker = (value: any, env: Environment) => Generator<Property>
 
-export interface Property {
-    value: any
-    path: (symbol | number | string)[]
-    root?: any
-}
 
-export function* from(arg?: any): Generator<Property> {
-    switch (typeof arg) {
-        case 'object': {
-            if (arg instanceof Map) {
-                for (let [k, v] of arg) {
-                    yield { value: v, path: [k], root: arg }
-                }
-                break;
-            } else if (arg instanceof Set) {
-                for (let v of arg) {
-                    yield { value: v, path: [], root: arg }
-                }
-                break;
-            } else if (Array.isArray(arg)) {
-                for (let i = 0; i < arg.length; ++i) {
-                    yield { value: arg[i], path: [i], root: arg }
-                }
-                break;
-            } else if (isWalkable(arg)) {
-                for (let k of Reflect.ownKeys(arg)) {
-                    yield { value: arg[k], path: [k], root: arg }
-                }
-                break;
-            }
+function isPath(p: any): p is Path {
+    switch (typeof p) {
+        case 'symbol':
+        case 'string':
+        case 'function':
+        case 'number': {
+            return true
         }
         default: {
-            yield { value: arg, path: [] }
+            return false
         }
     }
 }
-export function walk(depth: number = 1): GeneratorFn<Property> {
-    return function* (obj: any) {
-        if (depth >= 1 && isWalkable(obj)) {
-            let childWalker = walk(depth - 1)
-            for (let property of from(obj)) {
-                for (let child of childWalker(property.value)) {
-                    yield { ...child, path: property.path.concat(child.path), root: obj }
+
+export type ActionFn = (root: any, ...rest: Path[]) => any
+const SearchWalkerSymbol = Symbol.for('SearchWalkerSymbol')
+export function search(fn: (o: any, e: Environment) => Property): Walker {
+    function* children(obj: any) {
+        if (obj instanceof Map) {
+            for (let [k, v] of obj) {
+                yield v
+            }
+        } else if (obj instanceof Set) {
+            for (let v of obj) {
+                yield v
+            }
+        } else if (Array.isArray(obj)) {
+            for (let i = 0; i < obj.length; ++i) {
+                yield obj[i]
+            }
+        } else if (isWalkable(obj)) {
+            for (let k of Reflect.ownKeys(obj)) {
+                yield obj[k]
+            }
+        }
+    }
+    function* walk(obj: any, env: Environment): Generator<Property> {
+        let result = fn(obj, env)
+        if (result !== undefined) {
+            yield result
+        }
+        for (let child of children(obj)) {
+            yield* walk(child, env)
+        }
+    }
+    walk[SearchWalkerSymbol] = true
+    return walk
+}
+
+
+function toWalker(fieldName: Path): Walker {
+    if (typeof fieldName === 'function') {
+        // Path is Walker
+        return function* (obj: any, env: Environment): Generator<Property> {
+            let ret = fieldName(obj, env)
+            if (fieldName[SearchWalkerSymbol]) {
+                yield* ret;
+            } else if (ret !== undefined) {
+                yield ret
+            }
+        }
+    } else {
+        // convert Path to a Walker: (any, Environment)=>Generator<Property>
+        return function* (obj: any, env: Environment): Generator<Property> {
+            if (obj instanceof Map) {
+                yield obj.get(fieldName)
+            } else if (obj !== null && obj !== undefined && Reflect.has(obj, fieldName)) {
+                yield obj[fieldName]
+            }
+        }
+    }
+}
+
+function walker(...pth: Path[]): Walker {
+    let [current, ...rest] = pth
+    if (current === undefined) {
+        return function* (obj: any, env: Environment): Generator<Property> {
+            yield obj
+        }
+    } else {
+        let current_wks = toWalker(current)
+        let rest_wks = walker(...rest)
+        return function* wk(obj: any, env: Environment): Generator<Property> {
+            for (let result of current_wks(obj, env)) {
+                if (rest.length > 0) {
+                    yield* rest_wks(result, env)
+                } else {
+                    yield result
                 }
             }
-        } else {
-            yield { value: obj, path: [] }
         }
     }
 }
+export function path(act: ActionFn = Array.from): any {
+    let all_path = []
+    let retFn = new Proxy(() => { }, {
+        apply(target, thisArg, argumentsList) {
+            let not_path: any[] = argumentsList.filter(x => !isPath(x))
+            let is_path: Path[] = argumentsList.filter(x => isPath(x))
+            all_path = all_path.concat(is_path)
+            if (is_path.length > 0 && not_path.length === 0) {
+                return retFn
+            }
+            let w = walker(...all_path)
+            all_path = []
+            function call_walker(obj: any) {
+                let rw = w(obj, new Environment())
+                let afrw = act(rw)
+                return afrw
+            }
+            if (is_path.length === 0 && not_path.length === 0) {
+                return function (obj: any) {
+                    return call_walker(obj)
+                }
+            } else {
+                return call_walker(not_path[0])
+            }
+        },
+        get(_target, prop, receiver) {
+            if (typeof prop === 'string') {
+                let i = parseInt(prop)
+                all_path.push(isNaN(i) ? prop : i)
+            } else {
+                all_path.push(prop)
+            }
+            return receiver;
+        }
+    })
+    return retFn;
+}
+

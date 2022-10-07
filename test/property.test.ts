@@ -1,97 +1,31 @@
-import { from, walk, Property } from '../src/property'
+import { path, search } from '../src/property'
 import 'mocha'
 import { strict as assert } from 'node:assert';
-describe('from', () => {
-    it('should iterate []', () => {
-        let src = [1, 2, 3]
-        let tmp = Array.from(from(src))
-        assert.deepEqual(tmp, [
-            { value: 1, path: [0], root: src },
-            { value: 2, path: [1], root: src },
-            { value: 3, path: [2], root: src },
-        ])
-    })
-    it('should iterate {}', () => {
-        let src = { a: 1, b: 2, c: 3 }
-        let tmp = Array.from(from(src))
-        assert.deepEqual(tmp, [
-            { value: 1, path: ['a'], root: src },
-            { value: 2, path: ['b'], root: src },
-            { value: 3, path: ['c'], root: src },
-        ])
-    })
-    it('should iterate Map', () => {
-        let src = new Map(Object.entries({ a: 1, b: 2, c: 3 }))
-        let tmp = Array.from(from(src))
-        assert.deepEqual(tmp, [
-            { value: 1, path: ['a'], root: src },
-            { value: 2, path: ['b'], root: src },
-            { value: 3, path: ['c'], root: src },
-        ])
-    })
-    it('should iterate Set', () => {
-        let src = new Set([1, 2, 3])
-        let tmp = Array.from(from(src))
-        assert.deepEqual(tmp, [
-            { value: 1, path: [], root: src },
-            { value: 2, path: [], root: src },
-            { value: 3, path: [], root: src },
-        ])
-    })
-    it('should iterate null', () => {
-        let tmp = Array.from(from(null))
-        assert.deepEqual(tmp, [
-            { value: null, path: [] }
-        ])
-    })
-    it('should iterate undefined', () => {
-        let tmp = Array.from(from(undefined))
-        assert.deepEqual(tmp, [
-            { value: undefined, path: [] }
-        ])
-    })
-    it('should iterate number', () => {
-        let tmp = Array.from(from(1))
-        assert.deepEqual(tmp, [
-            { value: 1, path: [] }
-        ])
-    })
-    it('should iterate boolean', () => {
-        let tmp = Array.from(from(true))
-        assert.deepEqual(tmp, [
-            { value: true, path: [] }
-        ])
-    })
-    it('should iterate bigint', () => {
-        let tmp = Array.from(from(BigInt(1)))
-        assert.deepEqual(tmp, [
-            { value: BigInt(1), path: [] }
-        ])
-    })
-    it('should iterate Date', () => {
-        let src = new Date()
-        let tmp = Array.from(from(src))
-        assert.deepEqual(tmp, [
-            { value: src, path: [] }
-        ])
-    })
-    it('should iterate RegExp', () => {
-        let src = /hello/i
-        let tmp = Array.from(from(src))
-        assert.deepEqual(tmp, [
-            { value: src, path: [] }
-        ])
-    })
-})
+
 const data = {
     [Symbol.for('some_symbol')]: 12,
     hello: {
         world: 'hello world'
     },
+    undefined: undefined,
+    null: null,
+    bigint: BigInt(1),
+    Infinity: Infinity,
+    NaN: NaN,
     date: new Date(),
     regexp: /hello/,
     map: new Map(Object.entries({ a: 1, b: 2 })),
     set: new Set(['a', 'b']),
+    property: {
+        value: 'value',
+        path: ['path'],
+        search: null
+    },
+    confusing: {
+        value: ['value'],
+        path: ['path'],
+        search: null
+    },
     work: {
         kkk: {
             hello: {
@@ -111,43 +45,108 @@ const data = {
     }
 }
 
-describe('walk', () => {
-    it('should walk object, 1 level', () => {
-        const data = {
-            [Symbol.for('some_symbol')]: 12,
-            world: 'kkk',
-            hello: {
-                world: 'hello world'
-            },
-            date: new Date(),
-            regexp: /hello/,
-            map: new Map(Object.entries({ a: 1, b: 2 })),
-            set: new Set(['a', 'b']),
-        }
-        let tmp = Array.from(walk()(data))
-        assert.deepEqual(tmp, [
-            { value: data.world, path: ['world'], root: data },
-            { value: data.hello, path: ['hello'], root: data },
-            { value: data.date, path: ['date'], root: data },
-            { value: data.regexp, path: ['regexp'], root: data },
-            { value: data.map, path: ['map'], root: data },
-            { value: data.set, path: ['set'], root: data },
-            { value: 12, path: [Symbol.for('some_symbol')], root: data },
-        ])
+describe('should suppoert non-function path', () => {
+    it(`should return ${data.work.kkk.hello.world.d[1].k}`, () => {
+        assert.deepEqual(path().work.kkk.hello.world.d[1].k(data), [data.work.kkk.hello.world.d[1].k])
     })
-    it('should walk object, Infinity level', () => {
-        const data = {
-            world: 'kkk',
-            hello: {
-                world: 'hello world'
-            },
-        }
-        let tmp = Array.from(walk(Infinity)(data))
-        assert.deepEqual(tmp, [
-            { value: data.world, path: ['world'], root: data },
-            { value: data.hello.world, path: ['hello', 'world'], root: data },
-        ])
+    it(`should return ${data.work.kkk.hello.world.a}`, () => {
+        assert.deepEqual(path().work.kkk.hello.world.a(data), [data.work.kkk.hello.world.a])
+    })
+    it(`should return ${data.work.kkk.hello.world.a}`, () => {
+        assert.deepEqual(path()('work', 'kkk', 'hello', 'world').a(data), [data.work.kkk.hello.world.a])
+    })
+    it(`should return ${data.work.kkk.hello.world.a[0]}`, () => {
+        assert.deepEqual(path()('work', 'kkk', 'hello', 'world').a(0, data), [data.work.kkk.hello.world.a[0]])
+    })
+    it(`should return ${data[Symbol.for('some_symbol')]}`, () => {
+        assert.deepEqual(path()[Symbol.for('some_symbol')](data), [data[Symbol.for('some_symbol')]])
+    })
+    it(`should return ${data.work}`, () => {
+        assert.deepEqual(path().work()(data), [data.work])
+    })
+
+    it(`should return ${data['nothing']}`, () => {
+        assert.deepEqual(path().nothing()(data), [])
+    })
+    it(`should return ${data['undefined']}`, () => {
+        assert.deepEqual(path().undefined()(data), [undefined])
+    })
+    it(`should return ${data['null']}`, () => {
+        assert.deepEqual(path().null()(data), [null])
+    })
+    it(`should return ${data['Infinity']}`, () => {
+        assert.deepEqual(path().Infinity()(data), [Infinity])
+    })
+    it(`should return ${data['NaN']}`, () => {
+        assert.deepEqual(path().NaN()(data), [NaN])
     })
 
 })
-
+describe('should suppoert function path', () => {
+    it(`should return ${data.work.kkk.hello.world.a}`, () => {
+        assert.deepEqual(path().work((obj) => obj.kkk).hello.world.a(data), [data.work.kkk.hello.world.a])
+    })
+    it(`should return ${data.work.kkk.hello.world.a}`, () => {
+        assert.deepEqual(path().work((obj) => obj.kkk, (obj) => obj.hello).world.a(data), [data.work.kkk.hello.world.a])
+    })
+    it(`should return ${data.work.kkk.hello.world.a}`, () => {
+        assert.deepEqual(path().work((obj) => obj.kkk, (obj) => obj.hello).world.a(data), [data.work.kkk.hello.world.a])
+    })
+    it(`should return ${data.work.kkk.hello.world.a}`, () => {
+        assert.deepEqual(path().work((obj) => obj.kkk).hello((obj) => obj.world).a(data), [data.work.kkk.hello.world.a])
+    })
+    it(`should return nothing`, () => {
+        assert.deepEqual(path().work((obj) => { }).hello((obj) => obj.world).a(data), [])
+    })
+    it(`should return nothing`, () => {
+        assert.deepEqual(path().work((obj) => undefined).hello((obj) => obj.world).a(data), [])
+    })
+    it(`should return undefined`, () => {
+        assert.deepEqual(path().work((obj) => ({ value: [undefined], path: [], search: null })).hello((obj) => obj.world).a(data), [])
+    })
+    it(`should return undefined`, () => {
+        assert.deepEqual(path().work((obj) => ({ value: [undefined] })).hello((obj) => obj.world).a(data), [])
+    })
+    it(`should return ${data.property}`, () => {
+        assert.deepEqual(path().property((obj) => obj)(data), [data.property])
+    })
+    it(`should return 'value'`, () => {
+        assert.deepEqual(path().confusing((obj) => obj)(data), [data.confusing])
+    })
+    it(`should search for {k, v}`, () => {
+        let tmp = path().work.kkk.hello.world(search((obj) => {
+            if (typeof obj === 'object' && obj !== null && ('k' in obj) && ('z' in obj)) {
+                return obj
+            }
+        }))(data)
+        assert.deepEqual(tmp, [{
+            k: 'k1',
+            z: 'z1'
+        }, {
+            k: 'k2',
+            z: 'z2'
+        }])
+    })
+    it(`should search for {k, v}`, () => {
+        let tmp = path()(search((obj) => {
+            if (typeof obj === 'object' && obj !== null && ('k' in obj) && ('z' in obj)) {
+                return obj
+            }
+        }))((obj) => {
+            return [obj.k, obj.z]
+        })(data)
+        assert.deepEqual(tmp, [['k1', 'z1'], ['k2', 'z2']])
+    })
+    it(`should search for Map`, () => {
+        let tmp = path()(search((obj) => {
+            if (obj instanceof Map) {
+                return obj
+            }
+        })).a(data)
+        assert.deepEqual(tmp, [1])
+    })
+    it(`should search for Map`, () => {
+        let tmp = path()(data)
+        assert.deepEqual(tmp, [data])
+    })
+})
