@@ -1,4 +1,4 @@
-import { Path } from "../path";
+import { Path } from "../property";
 export declare const SamplerSymbol: unique symbol;
 export declare const MatcherSymbol: unique symbol;
 export declare const DifferSymbol: unique symbol;

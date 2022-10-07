@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.path = exports.search = exports.children = exports.from = exports.isWalkable = void 0;
+exports.path = exports.search = exports.isWalkable = void 0;
+const environment_1 = require("./environment");
 function isWalkable(v) {
     return typeof v === 'object'
         && v !== null
@@ -24,115 +25,127 @@ function isWalkable(v) {
         && !(v instanceof Promise);
 }
 exports.isWalkable = isWalkable;
-function* from(arg) {
-    switch (typeof arg) {
-        case 'object': {
-            if (arg instanceof Map) {
-                for (let [k, v] of arg) {
-                    yield { value: v, path: [k], root: arg };
-                }
-                break;
-            }
-            else if (arg instanceof Set) {
-                for (let v of arg) {
-                    yield { value: v, path: [], root: arg };
-                }
-                break;
-            }
-            else if (Array.isArray(arg)) {
-                for (let i = 0; i < arg.length; ++i) {
-                    yield { value: arg[i], path: [i], root: arg };
-                }
-                break;
-            }
-            else if (isWalkable(arg)) {
-                for (let k of Reflect.ownKeys(arg)) {
-                    yield { value: arg[k], path: [k], root: arg };
-                }
-                break;
-            }
+function isPath(p) {
+    switch (typeof p) {
+        case 'symbol':
+        case 'string':
+        case 'function':
+        case 'number': {
+            return true;
         }
         default: {
-            yield { value: arg, path: [] };
+            return false;
         }
     }
 }
-exports.from = from;
-function children() {
-    return function* do_children(obj) {
-        if (isWalkable(obj)) {
-            yield* from(obj);
-        }
-        else {
-            yield { value: obj, path: [] };
-        }
-    };
-}
-exports.children = children;
-function search() {
-    return function* do_search(obj) {
-        if (isWalkable(obj)) {
-            for (let property of from(obj)) {
-                for (let child of do_search(property.value)) {
-                    yield { ...child, path: property.path.concat(child.path), root: obj };
-                }
+const SearchWalkerSymbol = Symbol.for('SearchWalkerSymbol');
+function search(fn) {
+    function* children(obj) {
+        if (obj instanceof Map) {
+            for (let [k, v] of obj) {
+                yield v;
             }
         }
-        else {
-            yield { value: obj, path: [] };
+        else if (obj instanceof Set) {
+            for (let v of obj) {
+                yield v;
+            }
         }
-    };
+        else if (Array.isArray(obj)) {
+            for (let i = 0; i < obj.length; ++i) {
+                yield obj[i];
+            }
+        }
+        else if (isWalkable(obj)) {
+            for (let k of Reflect.ownKeys(obj)) {
+                yield obj[k];
+            }
+        }
+    }
+    function* walk(obj, env) {
+        let result = fn(obj, env);
+        if (result !== undefined) {
+            yield result;
+        }
+        for (let child of children(obj)) {
+            yield* walk(child, env);
+        }
+    }
+    walk[SearchWalkerSymbol] = true;
+    return walk;
 }
 exports.search = search;
 function toWalker(fieldName) {
     if (typeof fieldName === 'function') {
-        return fieldName;
+        // Path is Walker
+        return function* (obj, env) {
+            let ret = fieldName(obj, env);
+            if (fieldName[SearchWalkerSymbol]) {
+                yield* ret;
+            }
+            else if (ret !== undefined) {
+                yield ret;
+            }
+        };
     }
     else {
-        return function* (obj) {
-            if (obj !== null && typeof obj === 'object' && Reflect.has(obj, fieldName)) {
-                yield { value: obj[fieldName], path: [fieldName], root: obj };
+        // convert Path to a Walker: (any, Environment)=>Generator<Property>
+        return function* (obj, env) {
+            if (obj instanceof Map) {
+                yield obj.get(fieldName);
+            }
+            else if (obj !== null && obj !== undefined && Reflect.has(obj, fieldName)) {
+                yield obj[fieldName];
             }
         };
     }
 }
 function walker(...pth) {
-    return function* wk(obj) {
-        let [current, ...rest] = pth;
-        if (current === undefined) {
-            yield { value: obj, path: [] };
-        }
-        else {
-            let current_wks = toWalker(current);
-            let rest_wks = walker(...rest);
-            for (let { value, path } of current_wks(obj)) {
-                for (let x of rest_wks(value)) {
-                    yield { ...x, path: path.concat(x.path), root: obj };
+    let [current, ...rest] = pth;
+    if (current === undefined) {
+        return function* (obj, env) {
+            yield obj;
+        };
+    }
+    else {
+        let current_wks = toWalker(current);
+        let rest_wks = walker(...rest);
+        return function* wk(obj, env) {
+            for (let result of current_wks(obj, env)) {
+                if (rest.length > 0) {
+                    yield* rest_wks(result, env);
+                }
+                else {
+                    yield result;
                 }
             }
-        }
-    };
+        };
+    }
 }
-function get(root, ...rest) {
-    let w = walker(...rest);
-    return Array.from(w(root));
-}
-function path(act = get) {
+function path(act = Array.from) {
     let all_path = [];
     let retFn = new Proxy(() => { }, {
         apply(target, thisArg, argumentsList) {
-            if (argumentsList.length > 0) {
-                all_path = all_path.concat(argumentsList);
+            let not_path = argumentsList.filter(x => !isPath(x));
+            let is_path = argumentsList.filter(x => isPath(x));
+            all_path = all_path.concat(is_path);
+            if (is_path.length > 0 && not_path.length === 0) {
                 return retFn;
             }
+            let w = walker(...all_path);
+            all_path = [];
+            function call_walker(obj) {
+                let rw = w(obj, new environment_1.Environment());
+                let afrw = act(rw);
+                return afrw;
+            }
+            if (is_path.length === 0 && not_path.length === 0) {
+                return function (obj) {
+                    return call_walker(obj);
+                };
+            }
             else {
-                let ret = all_path;
-                all_path = [];
-                function Fn(obj) {
-                    return act(obj, ...ret);
-                }
-                Fn['path'] = [...ret];
-                return Fn;
+                return call_walker(not_path[0]);
             }
         },
         get(_target, prop, receiver) {

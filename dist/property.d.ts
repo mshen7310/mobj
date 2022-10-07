@@ -1,13 +1,10 @@
-export declare function isWalkable(v: any): boolean;
-export interface Property {
-    value: any;
-    path: Exclude<Path, Walker>[];
-    root?: any;
-}
-export declare type Walker = (value?: any) => Generator<Property>;
-export declare type Path = symbol | number | string | Walker;
-export declare function from(arg?: any): Generator<Property>;
-export declare function children(): Walker;
-export declare function search(): Walker;
+import { Environment } from "./environment";
+export declare type Walkable = object;
+export declare function isWalkable(v: any): v is Walkable;
+export declare type Path = symbol | number | string | WalkerFn;
+export declare type Property = any;
+export declare type WalkerFn = (value: any, env: Environment) => Property;
+export declare type Walker = (value: any, env: Environment) => Generator<Property>;
 export declare type ActionFn = (root: any, ...rest: Path[]) => any;
+export declare function search(fn: (o: any, e: Environment) => Property): Walker;
 export declare function path(act?: ActionFn): any;
