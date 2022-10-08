@@ -256,6 +256,7 @@ describe('path', () => {
     it(`should pass current path in Context 1`, () => {
         let tmp = path()(search((obj, ctx) => {
             ctx.getPath()
+            ctx.accessor(1)
             assert.deepEqual(ctx.accessor()(data), obj)
         })).a(data)
     })

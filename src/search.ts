@@ -94,8 +94,11 @@ export function search(fn: WalkerFn, depth: number = Infinity): Walker {
             if (dpth > 0) {
                 for (let [key, child] of children(obj)) {
                     ctx.push(key)
-                    yield* walk(child, ctx, dpth - 1)
-                    ctx.pop()
+                    try {
+                        yield* walk(child, ctx, dpth - 1)
+                    } finally {
+                        ctx.pop()
+                    }
                 }
             }
         }
@@ -157,17 +160,23 @@ function walker(...pth: Path[]): Walker {
         let rest_wks = walker(...rest)
         return function* wk(obj: any, ctx: Context): Generator<Property> {
             if (isPassivePath(current)) {
+                // filter out function component, 
+                // so that it won't recursively call itself 
+                // when ctx.accessor() is used within the function component
                 ctx.push(current)
             }
-            for (let result of current_wks(obj, ctx)) {
-                if (rest.length > 0) {
-                    yield* rest_wks(result, ctx)
-                } else {
-                    yield result
+            try {
+                for (let result of current_wks(obj, ctx)) {
+                    if (rest.length > 0) {
+                        yield* rest_wks(result, ctx)
+                    } else {
+                        yield result
+                    }
                 }
-            }
-            if (isPassivePath(current)) {
-                ctx.pop()
+            } finally {
+                if (isPassivePath(current)) {
+                    ctx.pop()
+                }
             }
         }
     }

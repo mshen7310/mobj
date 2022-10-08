@@ -30,21 +30,25 @@ export function variable(matcher?: Matcher): Variable {
     })
     return ret
 }
-
+type ContextPath = Exclude<Path, WalkerFn>
 export class Context {
     private readonly registry = new Map<string, Matcher>()
-    private readonly path: Exclude<Path, WalkerFn>[] = []
-    push(p: Exclude<Path, WalkerFn>): Exclude<Path, WalkerFn> {
+    private readonly path: ContextPath[] = []
+    push(p: ContextPath): ContextPath {
         return this.path.push(p)
     }
-    pop(): Exclude<Path, WalkerFn> {
+    pop(): ContextPath {
         return this.path.pop()
     }
-    getPath(): Exclude<Path, WalkerFn>[] {
+    getPath(): ContextPath[] {
         return [...this.path]
     }
-    accessor(): (x: any) => any {
-        return (obj: any) => path()(...this.path)(obj)[0]
+    accessor(n: number = 0): (x: any) => any {
+        if (n > 0) {
+            return (obj: any) => path()(...this.path.slice(0, -n))(obj)[0]
+        } else {
+            return (obj: any) => path()(...this.path)(obj)[0]
+        }
     }
     var(name?: string | Matcher, matcher?: Matcher): Variable {
         if (typeof name === 'function') {
