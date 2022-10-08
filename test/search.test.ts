@@ -42,10 +42,18 @@ const data = {
                 }
             }
         }
+    },
+    oops: {
+        shared: undefined,
+        circular: undefined
     }
 }
+//create shared structure
+data.oops.shared = data.work as any
+//create circular structure
+data.oops.circular = data.oops as any
 
-describe('should suppoert non-function path', () => {
+describe('path', () => {
     it(`should return ${data.work.kkk.hello.world.d[1].k}`, () => {
         assert.deepEqual(path().work.kkk.hello.world.d[1].k(data), [data.work.kkk.hello.world.d[1].k])
     })
@@ -82,7 +90,7 @@ describe('should suppoert non-function path', () => {
     })
 
 })
-describe('should suppoert function path', () => {
+describe('path', () => {
     it(`should search the 1st children`, () => {
         let tmp = path().work.kkk.hello.world.d(search((obj) => {
             if (typeof obj === 'object' && obj !== null && ('k' in obj) && ('z' in obj)) {
@@ -107,7 +115,7 @@ describe('should suppoert function path', () => {
     })
 
 })
-describe('should suppoert function path', () => {
+describe('path', () => {
     it(`should return ${data.work.kkk.hello.world.a}`, () => {
         assert.deepEqual(path().work((obj) => obj.kkk).hello.world.a(data), [data.work.kkk.hello.world.a])
     })

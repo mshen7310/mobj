@@ -1,4 +1,4 @@
-import { Environment } from "./environment"
+import { Environment } from "./varenv"
 
 export type Walkable = object
 export function isWalkable(v: any): v is Walkable {
@@ -65,17 +65,23 @@ export function search(fn: WalkerFn, depth: number = Infinity): Walker {
             }
         }
     }
+    let skip = new WeakSet()
     function* walk(obj: any, env: Environment, dpth: number = depth): Generator<Property> {
-        let result = fn(obj, env)
-        if (result !== undefined) {
-            yield result
-        }
-        // console.log('exit', dpth, obj)
-        if (dpth > 0) {
-            for (let child of children(obj)) {
-                yield* walk(child, env, dpth - 1)
+        if (!skip.has(obj)) {
+            let result = fn(obj, env)
+            if (result !== undefined) {
+                yield result
+            }
+            if (typeof obj === 'object' && obj !== null) {
+                skip.add(obj)
+            }
+            if (dpth > 0) {
+                for (let child of children(obj)) {
+                    yield* walk(child, env, dpth - 1)
+                }
             }
         } else {
+            // console.log('skip', obj)
         }
     }
     walk[WalkerSymbol] = true
