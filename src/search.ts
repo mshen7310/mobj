@@ -83,11 +83,13 @@ function toWalker(fieldName: Path): Walker {
     if (typeof fieldName === 'function') {
         // Path is Walker
         return function* (obj: any, env: Environment): Generator<Property> {
-            let ret = fieldName(obj, env)
             if (fieldName[SearchWalkerSymbol]) {
-                yield* ret;
-            } else if (ret !== undefined) {
-                yield ret
+                yield* fieldName(obj, env);
+            } else {
+                let ret = fieldName(obj, env)
+                if (ret !== undefined) {
+                    yield ret
+                }
             }
         }
     } else {

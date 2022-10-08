@@ -1,4 +1,4 @@
-import { path, search } from '../src/property'
+import { path, search } from '../src/search'
 import 'mocha'
 import { strict as assert } from 'node:assert';
 
@@ -101,10 +101,17 @@ describe('should suppoert function path', () => {
     it(`should return nothing`, () => {
         assert.deepEqual(path().work((obj) => undefined).hello((obj) => obj.world).a(data), [])
     })
-    it(`should return undefined`, () => {
+    it(`should return nothing`, () => {
+        assert.deepEqual(path().work((obj) => null).hello((obj) => obj.world).a(data), [])
+    })
+    it(`should return null`, () => {
+        assert.deepEqual(path().work((obj) => null)(data), [null])
+    })
+
+    it(`should return nothing`, () => {
         assert.deepEqual(path().work((obj) => ({ value: [undefined], path: [], search: null })).hello((obj) => obj.world).a(data), [])
     })
-    it(`should return undefined`, () => {
+    it(`should return nothing`, () => {
         assert.deepEqual(path().work((obj) => ({ value: [undefined] })).hello((obj) => obj.world).a(data), [])
     })
     it(`should return ${data.property}`, () => {

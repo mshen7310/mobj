@@ -1,5 +1,5 @@
 import { Sampler, SamplerSymbol, Matcher, MatcherSymbol, Type, DifferSymbol, Differ, Diff } from ".";
-import { intOf } from "../random";
+import { intOf, random } from "../random";
 export type BooleanPattern = boolean | undefined
 class BooleanClass implements Type<boolean, BooleanPattern>{
     constructor(private ptn: BooleanPattern) {
@@ -13,11 +13,11 @@ class BooleanClass implements Type<boolean, BooleanPattern>{
     factory(): (p: BooleanPattern) => Type<boolean, BooleanPattern> {
         return makeBoolean
     }
-    sampler(): Sampler<boolean> {
+    sampler(rate: number = 0.5): Sampler<boolean> {
         let self = this;
         let ret: () => boolean
         if (self.ptn === undefined) {
-            ret = () => [true, false][intOf(1)]
+            ret = () => random() <= rate
         } else {
             ret = () => self.ptn
         }

@@ -1,4 +1,4 @@
-import { Path, path } from "./property";
+import { Path, path } from "./search";
 
 export enum CompareResult {
     LessThan = -1,
