@@ -190,3 +190,28 @@ describe('path', () => {
         assert.deepEqual(tmp, [data])
     })
 })
+
+describe('path', () => {
+    it(`should work with environment and variable`, () => {
+        let p = path()((obj, env) => {
+            env.var('hello')(5)
+            return {
+                a: 5,
+                b: 'kkk'
+            }
+        })((obj, env) => {
+            let v = env.var('hello')
+            if (v(obj.a)) {
+                return obj
+            }
+        })
+        assert.deepEqual(p({}), [{ a: 5, b: 'kkk' }])
+        let pp = p((obj, env) => {
+            let v = env.var('hello')
+            if (v(obj.b)) {
+                return obj
+            }
+        })
+        assert.deepEqual(pp({}), [])
+    })
+})

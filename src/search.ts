@@ -145,7 +145,6 @@ export function path(act: ActionFn = Array.from): any {
                 return retFn
             }
             let w = walker(...all_path)
-            all_path = []
             function call_walker(obj: any) {
                 let rw = w(obj, new Environment())
                 let afrw = act(rw)
