@@ -7,5 +7,17 @@
     },
     "include": [
         "src/**/*"
-    ]
+    ],
+    "tsdocsOptions": {
+        "out": "./docs",
+        "structure": "@ts-docs/default-docs-structure",
+        "entryPoints": [
+            "src/index.ts"
+        ],
+        "name": "alpacar",
+        "exportMode": "simple",
+        "style": {},
+        "plugins": {},
+        "sort": "alphabetical"
+    }
 }
