@@ -79,3 +79,40 @@ describe(`deepEqual compares composite values`, () => {
     })
 
 })
+
+describe(`deepEqual compares composite values with circular structure`, () => {
+    let o1 = {
+        a: {
+            b: {
+                c: {
+                    d: [1, 2, 3]
+                },
+                b: null
+            }
+        },
+        b: null
+    }
+    o1.b = o1.a.b as any
+    o1.a.b.b = o1.a.b as any
+    it(`should work with self referencing structure`, () => {
+        assert.equal(deepEqual(o1.b, o1.a.b), true)
+        assert.equal(deepEqual(o1.a.b.b, o1.a.b), true)
+    })
+    let o2 = {
+        a: {
+            b: {
+                c: {
+                    d: [1, 2, 3]
+                },
+                b: null
+            }
+        },
+        b: null
+    }
+    o2.b = o1.a.b as any
+    o2.a.b.b = o1.a.b as any
+    it(`should work with cross referencing structure`, () => {
+        assert.equal(deepEqual(o1, o2), true)
+        assert.equal(deepEqual(o2, o1), true)
+    })
+})
