@@ -1,4 +1,5 @@
 import { deepEqual } from "./equal";
+import { Path, path, WalkerFn } from "./search";
 import { Matcher } from "./types"
 
 export type Variable = (...value: any[]) => any
@@ -32,6 +33,19 @@ export function variable(matcher?: Matcher): Variable {
 
 export class Context {
     private readonly registry = new Map<string, Matcher>()
+    private readonly path: Exclude<Path, WalkerFn>[] = []
+    push(p: Exclude<Path, WalkerFn>): Exclude<Path, WalkerFn> {
+        return this.path.push(p)
+    }
+    pop(): Exclude<Path, WalkerFn> {
+        return this.path.pop()
+    }
+    getPath(): Exclude<Path, WalkerFn>[] {
+        return [...this.path]
+    }
+    accessor(): (x: any) => any {
+        return (obj: any) => path()(...this.path)(obj)[0]
+    }
     var(name?: string | Matcher, matcher?: Matcher): Variable {
         if (typeof name === 'function') {
             matcher = name

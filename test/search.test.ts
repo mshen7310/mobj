@@ -1,4 +1,4 @@
-import { path, search } from '../src/search'
+import { path, search, setKey } from '../src/search'
 import 'mocha'
 import { strict as assert } from 'node:assert';
 
@@ -46,7 +46,22 @@ const data = {
     oops: {
         shared: undefined,
         circular: undefined
-    }
+    },
+    [Symbol.for('symbol')]: [{
+        a: {
+            b: {
+                c: {
+                    Set: new Set([{
+                        Map: new Map(Object.entries({
+                            kk: 1,
+                            zz: 2,
+                            hello: 'world'
+                        }))
+                    }])
+                }
+            }
+        }
+    }]
 }
 //create shared structure
 data.oops.shared = data.work as any
@@ -55,9 +70,8 @@ data.oops.circular = data.oops as any
 
 describe('path', () => {
     it(`should return 2`, () => {
-        assert.deepEqual(path().set([2]).z(data), [2])
+        assert.deepEqual(path().set(setKey(2)).z(data), [2])
     })
-
     it(`should return ${data.work.kkk.hello.world.d[1].k}`, () => {
         assert.deepEqual(path().work.kkk.hello.world.d[1].k(data), [data.work.kkk.hello.world.d[1].k])
     })
@@ -77,11 +91,11 @@ describe('path', () => {
         assert.deepEqual(path().work()(data), [data.work])
     })
 
-    it(`should return ${data['nothing']}`, () => {
+    it(`should return []`, () => {
         assert.deepEqual(path().nothing()(data), [])
     })
     it(`should return ${data['undefined']}`, () => {
-        assert.deepEqual(path().undefined()(data), [undefined])
+        assert.deepEqual(path().undefined()(data), [])
     })
     it(`should return ${data['null']}`, () => {
         assert.deepEqual(path().null()(data), [null])
@@ -182,7 +196,7 @@ describe('path', () => {
         assert.deepEqual(tmp, [[1, 2], ['k1', 'z1'], ['k2', 'z2']])
     })
     it(`should search for Map`, () => {
-        let tmp = path()(search((obj) => {
+        let tmp = path()(search((obj, ctx) => {
             if (obj instanceof Map) {
                 return obj
             }
@@ -217,5 +231,37 @@ describe('path', () => {
             }
         })
         assert.deepEqual(pp({}), [])
+    })
+})
+const data2 = {
+    Map1: new Map(Object.entries({ x: 1, y: 2 })),
+    [Symbol.for('symbol')]: [{
+        a: {
+            b: {
+                c: {
+                    Set2: new Set([{
+                        Map2: new Map(Object.entries({
+                            kk: 1,
+                            zz: 2,
+                            hello: 'world'
+                        }))
+                    }])
+                }
+            }
+        }
+    }]
+}
+
+describe('path', () => {
+    it(`should pass current path in Context 1`, () => {
+        let tmp = path()(search((obj, ctx) => {
+            ctx.getPath()
+            assert.deepEqual(ctx.accessor()(data), obj)
+        })).a(data)
+    })
+    it(`should pass current path in Context 2`, () => {
+        let tmp = path()(search((obj, ctx) => {
+            assert.deepEqual(ctx.accessor()(data2), obj)
+        })).a(data2)
     })
 })

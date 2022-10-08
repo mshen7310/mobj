@@ -12,6 +12,7 @@ export function deepEqual(x, y, skip = new WeakMap()): boolean {
         return x.toString() === y.toString()
     }
     if (skip.has(x)) {
+        // TODO: design a test case to cover the next line
         return skip.get(x) === y
     }
     if (x instanceof Map && y instanceof Map) {
