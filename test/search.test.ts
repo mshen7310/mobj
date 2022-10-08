@@ -83,6 +83,31 @@ describe('should suppoert non-function path', () => {
 
 })
 describe('should suppoert function path', () => {
+    it(`should search the 1st children`, () => {
+        let tmp = path().work.kkk.hello.world.d(search((obj) => {
+            if (typeof obj === 'object' && obj !== null && ('k' in obj) && ('z' in obj)) {
+                return obj
+            }
+        }, 1))(data)
+        assert.deepEqual(tmp, [{
+            k: 'k1',
+            z: 'z1'
+        }, {
+            k: 'k2',
+            z: 'z2'
+        }])
+    })
+    it(`should search the 0th children`, () => {
+        let tmp = path().work.kkk.hello.world.d(search((obj) => {
+            if (typeof obj === 'object' && obj !== null && ('k' in obj) && ('z' in obj)) {
+                return obj
+            }
+        }, 0))(data)
+        assert.deepEqual(tmp, [])
+    })
+
+})
+describe('should suppoert function path', () => {
     it(`should return ${data.work.kkk.hello.world.a}`, () => {
         assert.deepEqual(path().work((obj) => obj.kkk).hello.world.a(data), [data.work.kkk.hello.world.a])
     })

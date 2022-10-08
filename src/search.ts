@@ -44,8 +44,8 @@ function isPath(p: any): p is Path {
 }
 
 export type ActionFn = (root: any, ...rest: Path[]) => any
-const SearchWalkerSymbol = Symbol.for('SearchWalkerSymbol')
-export function search(fn: (o: any, e: Environment) => Property): Walker {
+const WalkerSymbol = Symbol.for('WalkerSymbol')
+export function search(fn: WalkerFn, depth: number = Infinity): Walker {
     function* children(obj: any) {
         if (obj instanceof Map) {
             for (let [k, v] of obj) {
@@ -65,16 +65,20 @@ export function search(fn: (o: any, e: Environment) => Property): Walker {
             }
         }
     }
-    function* walk(obj: any, env: Environment): Generator<Property> {
+    function* walk(obj: any, env: Environment, dpth: number = depth): Generator<Property> {
         let result = fn(obj, env)
         if (result !== undefined) {
             yield result
         }
-        for (let child of children(obj)) {
-            yield* walk(child, env)
+        // console.log('exit', dpth, obj)
+        if (dpth > 0) {
+            for (let child of children(obj)) {
+                yield* walk(child, env, dpth - 1)
+            }
+        } else {
         }
     }
-    walk[SearchWalkerSymbol] = true
+    walk[WalkerSymbol] = true
     return walk
 }
 
@@ -83,7 +87,7 @@ function toWalker(fieldName: Path): Walker {
     if (typeof fieldName === 'function') {
         // Path is Walker
         return function* (obj: any, env: Environment): Generator<Property> {
-            if (fieldName[SearchWalkerSymbol]) {
+            if (fieldName[WalkerSymbol]) {
                 yield* fieldName(obj, env);
             } else {
                 let ret = fieldName(obj, env)
