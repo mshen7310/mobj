@@ -15,7 +15,7 @@ const data = {
     date: new Date(),
     regexp: /hello/,
     map: new Map(Object.entries({ a: 1, b: 2 })),
-    set: new Set(['a', 'b']),
+    set: new Set(['a', 'b', { k: 1, z: 2 }]),
     property: {
         value: 'value',
         path: ['path'],
@@ -54,6 +54,10 @@ data.oops.shared = data.work as any
 data.oops.circular = data.oops as any
 
 describe('path', () => {
+    it(`should return 2`, () => {
+        assert.deepEqual(path().set([2]).z(data), [2])
+    })
+
     it(`should return ${data.work.kkk.hello.world.d[1].k}`, () => {
         assert.deepEqual(path().work.kkk.hello.world.d[1].k(data), [data.work.kkk.hello.world.d[1].k])
     })
@@ -175,7 +179,7 @@ describe('path', () => {
         }))((obj) => {
             return [obj.k, obj.z]
         })(data)
-        assert.deepEqual(tmp, [['k1', 'z1'], ['k2', 'z2']])
+        assert.deepEqual(tmp, [[1, 2], ['k1', 'z1'], ['k2', 'z2']])
     })
     it(`should search for Map`, () => {
         let tmp = path()(search((obj) => {

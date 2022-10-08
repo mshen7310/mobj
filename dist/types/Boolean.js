@@ -15,11 +15,11 @@ class BooleanClass {
     factory() {
         return makeBoolean;
     }
-    sampler() {
+    sampler(rate = 0.5) {
         let self = this;
         let ret;
         if (self.ptn === undefined) {
-            ret = () => [true, false][(0, random_1.intOf)(1)];
+            ret = () => (0, random_1.random)() <= rate;
         }
         else {
             ret = () => self.ptn;

@@ -44,10 +44,8 @@ export function deepEqual(x, y, skip = new WeakMap()): boolean {
         }
     } else if (x instanceof Set && y instanceof Set) {
         if (x.size === y.size) {
-            let x_array = [...x]
-            let y_array = [...y]
-            for (let i = 0; i < x_array.length; ++i) {
-                if (!deepEqual(x_array[i], y_array[i], skip)) {
+            for (let xi of x) {
+                if (!y.has(xi)) {
                     skip.set(x, false)
                     return false
                 }

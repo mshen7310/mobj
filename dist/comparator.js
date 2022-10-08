@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.comparator = exports.CompareResult = void 0;
-const property_1 = require("./property");
+const search_1 = require("./search");
 var CompareResult;
 (function (CompareResult) {
     CompareResult[CompareResult["LessThan"] = -1] = "LessThan";
@@ -10,8 +10,8 @@ var CompareResult;
 })(CompareResult = exports.CompareResult || (exports.CompareResult = {}));
 function comparator(...p) {
     return (a, b) => {
-        let aa = (0, property_1.path)()(...p)(a);
-        let bb = (0, property_1.path)()(...p)(b);
+        let aa = (0, search_1.path)()(...p)(a);
+        let bb = (0, search_1.path)()(...p)(b);
         if (aa < bb) {
             // console.log(aa, '<', bb)
             return CompareResult.LessThan;

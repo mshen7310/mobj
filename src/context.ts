@@ -30,7 +30,7 @@ export function variable(matcher?: Matcher): Variable {
     return ret
 }
 
-export class Environment {
+export class Context {
     private readonly registry = new Map<string, Matcher>()
     var(name?: string | Matcher, matcher?: Matcher): Variable {
         if (typeof name === 'function') {

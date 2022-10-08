@@ -1,4 +1,4 @@
-import { Path } from "./property";
+import { Path } from "./search";
 export declare enum FieldType {
     Struct = "Struct",
     Array = "Array",

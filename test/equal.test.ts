@@ -69,8 +69,9 @@ describe(`deepEqual compares composite values`, () => {
     })
     it(`should work with Set`, () => {
         assert.equal(deepEqual(new Set([1, 2, 3]), new Set([1, 2, 3])), true)
-        assert.equal(deepEqual(new Set([1, 2, 3]), new Set([1, 3, 2])), false)
+        assert.equal(deepEqual(new Set([1, 2, 3]), new Set([1, 3, 2])), true)
         assert.equal(deepEqual(new Set([1, 2, 3]), new Set([1, 3])), false)
+        assert.equal(deepEqual(new Set([1, 2, 3]), new Set([1, 3, 4])), false)
     })
     it(`should work with Map`, () => {
         assert.equal(deepEqual(new Map(Object.entries({ a: 1, b: 2, c: 3 })), new Map(Object.entries({ a: 1, c: 3, b: 2 }))), true)

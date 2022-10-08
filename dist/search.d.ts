@@ -1,0 +1,11 @@
+import { Context } from "./context";
+export declare type Walkable = object;
+export declare function isWalkable(v: any): v is Walkable;
+export declare type SetKey = [number];
+export declare type Path = symbol | number | string | SetKey | WalkerFn;
+export declare type Property = any;
+export declare type WalkerFn = (value: any, ctx: Context) => Property;
+export declare type Walker = (value: any, ctx: Context) => Generator<Property>;
+export declare type ActionFn = (root: any, ...rest: Path[]) => any;
+export declare function search(fn: WalkerFn, depth?: number): Walker;
+export declare function path(act?: ActionFn): any;

@@ -1,4 +1,4 @@
-import { Environment } from "./varenv"
+import { Context } from "./context"
 
 export type Walkable = object
 export function isWalkable(v: any): v is Walkable {
@@ -23,12 +23,15 @@ export function isWalkable(v: any): v is Walkable {
         && !(v instanceof TransformStream)
         && !(v instanceof Promise)
 }
-export type Path = symbol | number | string | WalkerFn
+export type SetKey = [number]
+export type Path = symbol | number | string | SetKey | WalkerFn
 export type Property = any
-export type WalkerFn = (value: any, env: Environment) => Property
-export type Walker = (value: any, env: Environment) => Generator<Property>
+export type WalkerFn = (value: any, ctx: Context) => Property
+export type Walker = (value: any, ctx: Context) => Generator<Property>
 
-
+function isSetKey(p: any): p is SetKey {
+    return Array.isArray(p) && p.length === 1 && typeof p[0] === 'number'
+}
 function isPath(p: any): p is Path {
     switch (typeof p) {
         case 'symbol':
@@ -36,6 +39,9 @@ function isPath(p: any): p is Path {
         case 'function':
         case 'number': {
             return true
+        }
+        case 'object': {
+            return Array.isArray(p) && p.length === 1 && typeof p[0] === 'number'
         }
         default: {
             return false
@@ -66,9 +72,9 @@ export function search(fn: WalkerFn, depth: number = Infinity): Walker {
         }
     }
     let skip = new WeakSet()
-    function* walk(obj: any, env: Environment, dpth: number = depth): Generator<Property> {
+    function* walk(obj: any, ctx: Context, dpth: number = depth): Generator<Property> {
         if (!skip.has(obj)) {
-            let result = fn(obj, env)
+            let result = fn(obj, ctx)
             if (result !== undefined) {
                 yield result
             }
@@ -77,7 +83,7 @@ export function search(fn: WalkerFn, depth: number = Infinity): Walker {
             }
             if (dpth > 0) {
                 for (let child of children(obj)) {
-                    yield* walk(child, env, dpth - 1)
+                    yield* walk(child, ctx, dpth - 1)
                 }
             }
         } else {
@@ -92,19 +98,26 @@ export function search(fn: WalkerFn, depth: number = Infinity): Walker {
 function toWalker(fieldName: Path): Walker {
     if (typeof fieldName === 'function') {
         // Path is Walker
-        return function* (obj: any, env: Environment): Generator<Property> {
+        return function* (obj: any, ctx: Context): Generator<Property> {
             if (fieldName[WalkerSymbol]) {
-                yield* fieldName(obj, env);
+                yield* fieldName(obj, ctx);
             } else {
-                let ret = fieldName(obj, env)
+                let ret = fieldName(obj, ctx)
                 if (ret !== undefined) {
                     yield ret
                 }
             }
         }
+    } else if (isSetKey(fieldName)) {
+        // convert Path to a Walker: (any, Environment)=>Generator<Property>
+        return function* (obj: any, ctx: Context): Generator<Property> {
+            if (obj instanceof Set) {
+                yield [...obj][fieldName[0]]
+            }
+        }
     } else {
         // convert Path to a Walker: (any, Environment)=>Generator<Property>
-        return function* (obj: any, env: Environment): Generator<Property> {
+        return function* (obj: any, ctx: Context): Generator<Property> {
             if (obj instanceof Map) {
                 yield obj.get(fieldName)
             } else if (obj !== null && obj !== undefined && Reflect.has(obj, fieldName)) {
@@ -117,16 +130,16 @@ function toWalker(fieldName: Path): Walker {
 function walker(...pth: Path[]): Walker {
     let [current, ...rest] = pth
     if (current === undefined) {
-        return function* (obj: any, env: Environment): Generator<Property> {
+        return function* (obj: any, ctx: Context): Generator<Property> {
             yield obj
         }
     } else {
         let current_wks = toWalker(current)
         let rest_wks = walker(...rest)
-        return function* wk(obj: any, env: Environment): Generator<Property> {
-            for (let result of current_wks(obj, env)) {
+        return function* wk(obj: any, ctx: Context): Generator<Property> {
+            for (let result of current_wks(obj, ctx)) {
                 if (rest.length > 0) {
-                    yield* rest_wks(result, env)
+                    yield* rest_wks(result, ctx)
                 } else {
                     yield result
                 }
@@ -145,17 +158,17 @@ export function path(act: ActionFn = Array.from): any {
                 return retFn
             }
             let w = walker(...all_path)
-            function call_walker(obj: any) {
-                let rw = w(obj, new Environment())
+            function call_walker(obj: any, ctx: Context) {
+                let rw = w(obj, ctx)
                 let afrw = act(rw)
                 return afrw
             }
             if (is_path.length === 0 && not_path.length === 0) {
-                return function (obj: any) {
-                    return call_walker(obj)
+                return function (obj: any, ctx: Context = new Context()) {
+                    return call_walker(obj, ctx)
                 }
             } else {
-                return call_walker(not_path[0])
+                return call_walker(not_path[0], not_path[1] instanceof Context ? not_path[1] : new Context())
             }
         },
         get(_target, prop, receiver) {

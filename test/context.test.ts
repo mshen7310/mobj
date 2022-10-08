@@ -1,9 +1,9 @@
 import 'mocha'
 import { strict as assert } from 'node:assert';
-import { Environment } from '../src/varenv';
+import { Context } from '../src/context';
 
 describe(`Variable should match anything`, () => {
-    let env = new Environment()
+    let env = new Context()
     let date = new Date()
     let var_number = env.var()
     let var_Infinity = env.var()
@@ -63,7 +63,7 @@ describe(`Variable should match anything`, () => {
     })
 })
 describe(`Variable shoud NOT match different thing`, () => {
-    let env = new Environment()
+    let env = new Context()
     let date = new Date()
     let var_number = env.var()
     let var_Infinity = env.var()
@@ -137,7 +137,7 @@ describe(`Variable shoud NOT match different thing`, () => {
     })
 })
 describe(`Variable shoud match the same thing`, () => {
-    let env = new Environment()
+    let env = new Context()
     let date = new Date()
     let var_number = env.var()
     let var_Infinity = env.var()
@@ -211,7 +211,7 @@ describe(`Variable shoud match the same thing`, () => {
     })
 })
 describe(`Variable should return the matched value from 'value' property`, () => {
-    let env = new Environment()
+    let env = new Context()
     let date = new Date()
     let var_number = env.var()
     let var_Infinity = env.var()
@@ -313,7 +313,7 @@ describe(`Variable should return the matched value from 'value' property`, () =>
     })
 })
 describe(`Variable should be empty before match and non-empty after match`, () => {
-    let env = new Environment()
+    let env = new Context()
     let date = new Date()
     let var_number = env.var()
     let var_Infinity = env.var()
@@ -404,7 +404,7 @@ describe(`Variable should be empty before match and non-empty after match`, () =
     })
 })
 describe(`Variable should match number only`, () => {
-    let env = new Environment()
+    let env = new Context()
     it(`1`, () => {
         let v = env.var((x) => typeof x === 'number')
         assert.equal(v(1), true)
@@ -463,7 +463,7 @@ describe(`Variable should match number only`, () => {
     })
 })
 describe(`Variable should match string only`, () => {
-    let env = new Environment()
+    let env = new Context()
     it(`1`, () => {
         let v = env.var((x) => typeof x === 'string')
         assert.equal(v(1), false)
@@ -523,7 +523,7 @@ describe(`Variable should match string only`, () => {
 
 })
 describe(`Variable should match null only`, () => {
-    let env = new Environment()
+    let env = new Context()
     it(`1`, () => {
         let v = env.var((x) => x === null)
         assert.equal(v(1), false)
@@ -583,7 +583,7 @@ describe(`Variable should match null only`, () => {
 
 })
 describe(`Variable should match boolean only`, () => {
-    let env = new Environment()
+    let env = new Context()
     it(`1`, () => {
         let v = env.var((x) => typeof x === 'boolean')
         assert.equal(v(1), false)
@@ -643,7 +643,7 @@ describe(`Variable should match boolean only`, () => {
 
 })
 describe(`Variable should match nothing`, () => {
-    let env = new Environment()
+    let env = new Context()
     it(`1`, () => {
         let v = env.var((x) => false)
         assert.equal(v(1), false)
@@ -704,7 +704,7 @@ describe(`Variable should match nothing`, () => {
 })
 
 describe(`Environment`, () => {
-    let env = new Environment()
+    let env = new Context()
     it(`should create new variable when name is NOT given`, () => {
         let v1 = env.var()
         let v2 = env.var()
