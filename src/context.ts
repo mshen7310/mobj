@@ -1,5 +1,5 @@
 import { deepEqual } from "./equal";
-import { Path, path, WalkerFn } from "./search";
+import { isWalkable, Path, path, WalkerFn } from "./search";
 import { Matcher } from "./types"
 
 export type Variable = (...value: any[]) => any
@@ -32,8 +32,17 @@ export function variable(matcher?: Matcher): Variable {
 }
 type ContextPath = Exclude<Path, WalkerFn>
 export class Context {
+    private readonly skip_node = new WeakSet()
     private readonly registry = new Map<string, Matcher>()
     private readonly path: ContextPath[] = []
+    skip(a: any) {
+        if (typeof a === 'object' && a !== null) {
+            this.skip_node.add(a)
+        }
+    }
+    skipped(a: any): boolean {
+        return this.skip_node.has(a)
+    }
     push(p: ContextPath): ContextPath {
         return this.path.push(p)
     }

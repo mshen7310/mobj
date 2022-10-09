@@ -91,7 +91,7 @@ export function search(fn: WalkerFn, depth: number = Infinity): Walker {
             if (typeof obj === 'object' && obj !== null) {
                 skip.add(obj)
             }
-            if (dpth > 0) {
+            if (dpth > 0 && !ctx.skipped(obj)) {
                 for (let [key, child] of children(obj)) {
                     ctx.push(key)
                     try {
@@ -161,7 +161,7 @@ function walker(...pth: Path[]): Walker {
         return function* wk(obj: any, ctx: Context): Generator<Property> {
             if (isPassivePath(current)) {
                 // filter out function component, 
-                // so that it won't recursively call itself 
+                // so that it won't call itself recursively
                 // when ctx.accessor() is used within the function component
                 ctx.push(current)
             }
