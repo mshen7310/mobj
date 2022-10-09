@@ -1,6 +1,65 @@
-import { deepEqual } from "./equal";
-import { Path, path, isPassivePath } from "./search";
+import { Path, path, isPassivePath, search } from "./search";
 import { Matcher } from "./types"
+
+function equal(x, y) {
+    if (x === y || (Number.isNaN(x) && Number.isNaN(y))) {
+        return true
+    } else if (typeof x !== typeof y || typeof x !== 'object') {
+        return false
+    } else if (x instanceof Date && y instanceof Date) {
+        return x.getTime() === y.getTime()
+    } else if (x instanceof RegExp && y instanceof RegExp) {
+        return x.toString() === y.toString()
+    }
+}
+const diffClass = (a, b, ...cls) => cls.reduce((r, c) => r || (a instanceof c && !(b instanceof c)), false)
+
+function deepHas(set: Set<any>, e: object): boolean {
+    for (let element of set) {
+        if (deepEqual(e, element)) {
+            return true
+        }
+    }
+    return false
+}
+
+export function deepEqual(x, y): boolean {
+    const p = path()(search((obj, ctx) => {
+        const peer = ctx.accessor()(y)
+        const equal_primitive = equal(obj, peer)
+        if (false === equal_primitive) {
+            ctx.cancel()
+            return false
+        } else if (undefined === equal_primitive) {
+            if (
+                diffClass(obj, peer, Set, Map, Array)
+                || (obj instanceof Map && peer instanceof Map && obj.size !== peer.size)
+                || (Array.isArray(obj) && Array.isArray(peer) && obj.length !== peer.length)
+                || (obj instanceof Set && peer instanceof Set && obj.size !== peer.size)
+                || (Reflect.ownKeys(obj).length !== Reflect.ownKeys(peer).length)
+            ) {
+                ctx.cancel()
+                return false
+            } else if (obj instanceof Set && peer instanceof Set) {
+                for (let xi of obj) {
+                    if (!peer.has(xi)) {
+                        if (typeof xi === 'object' && xi !== null) {
+                            if (deepHas(peer, xi)) {
+                                continue
+                            }
+                        }
+                        ctx.cancel()
+                        return false
+                    }
+                }
+                ctx.skip(obj)
+            }
+        }
+    }))()
+    return p(x).length === 0
+}
+
+
 
 export type Variable = <T>(...value: T[]) => boolean
 

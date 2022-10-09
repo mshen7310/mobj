@@ -1,6 +1,6 @@
 import 'mocha'
 import { strict as assert } from 'node:assert';
-import { deepEqual } from '../src/equal';
+import { deepEqual } from '../src/context';
 
 describe(`deepEqual compares primitive values`, () => {
     it(`should work with number`, () => {
@@ -115,6 +115,14 @@ describe(`deepEqual compares composite values`, () => {
         assert.equal(deepEqual(new Set([1, 2, 3]), new Set([1, 3])), false)
         assert.equal(deepEqual(new Set([1, 2, 3]), new Set([1, 3, 4])), false)
     })
+    it(`should work with Set deeply`, () => {
+        assert.equal(deepEqual(new Set([1, { a: 1 }, 3]), new Set([1, 3, { a: 1 }])), true)
+        assert.equal(deepEqual(new Set([1, { a: 1 }, 3]), new Set([1, 3, { a: 2 }])), false)
+    })
+    it(`should work with Set vs. Map`, () => {
+        assert.equal(deepEqual(new Set([1, { a: 1 }, 3]), new Map(Object.entries({ a: 1 }))), false)
+    })
+
     it(`should work with Map`, () => {
         assert.equal(deepEqual(new Map(Object.entries({ a: 1, b: 2, c: 3 })), new Map(Object.entries({ a: 1, c: 3, b: 2 }))), true)
         assert.equal(deepEqual(new Map(Object.entries({ a: 1, b: 2, c: 3 })), new Map(Object.entries({ a: 1, c: 3, b: 3 }))), false)
