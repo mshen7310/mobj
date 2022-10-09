@@ -67,6 +67,48 @@ describe(`deepEqual compares composite values`, () => {
         assert.equal(deepEqual({ a: 1, b: 2, c: 3 }, { a: 1, c: 3, b: 3 }), false)
         assert.equal(deepEqual({ a: 1, b: 2, c: 3 }, { a: 1, c: 3 }), false)
     })
+    it(`should work with objects A extends B`, () => {
+        let A = {
+            a: {
+                b: {
+                    c: {
+                        d: {
+                            e: {
+                                f: 'f'
+                            }
+                        }
+                    }
+                }
+            },
+            A: {
+                B: {
+                    C: {
+                        D: {
+                            E: {
+                                F: 'F'
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        let B = {
+            A: {
+                B: {
+                    C: {
+                        D: {
+                            E: {
+                                F: 'F'
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        assert.equal(deepEqual(A, B), false)
+        assert.equal(deepEqual(B, A), false)
+    })
+
     it(`should work with Set`, () => {
         assert.equal(deepEqual(new Set([1, 2, 3]), new Set([1, 2, 3])), true)
         assert.equal(deepEqual(new Set([1, 2, 3]), new Set([1, 3, 2])), true)

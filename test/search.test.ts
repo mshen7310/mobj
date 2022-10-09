@@ -1,6 +1,7 @@
 import { path, search, setKey } from '../src/search'
 import 'mocha'
 import { strict as assert } from 'node:assert';
+import { fi } from 'date-fns/locale';
 
 const data = {
     [Symbol.for('some_symbol')]: 12,
@@ -264,5 +265,23 @@ describe('path', () => {
         let tmp = path()(search((obj, ctx) => {
             assert.deepEqual(ctx.accessor()(data2), obj)
         })).a(data2)
+    })
+    it(`should skip all Set and Map`, () => {
+        let tmp = path()(search((obj, ctx) => {
+            if (obj instanceof Map || obj instanceof Set) {
+                ctx.skip(obj)
+            } else if (typeof obj === 'number') {
+                ctx.skip(obj)
+            } else if (typeof obj === 'object' && obj !== null && 'k' in obj && 'z' in obj) {
+                return obj
+            }
+        }))(data)
+        assert.deepEqual(tmp, [{
+            k: 'k1',
+            z: 'z1'
+        }, {
+            k: 'k2',
+            z: 'z2'
+        }])
     })
 })
