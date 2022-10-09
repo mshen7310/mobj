@@ -54,7 +54,7 @@ function isPath(p: any): p is Path {
         }
     }
 }
-function isPassivePath(p: any): p is Exclude<Path, WalkerFn> {
+export function isPassivePath(p: any): p is Exclude<Path, WalkerFn> {
     return typeof p !== 'function' && isPath(p)
 }
 
@@ -93,9 +93,12 @@ export function search(fn: WalkerFn, depth: number = Infinity): Walker {
             }
             if (dpth > 0 && !ctx.skipped(obj)) {
                 for (let [key, child] of children(obj)) {
-                    ctx.push(key)
+                    ctx.push(child, key)
                     try {
                         yield* walk(child, ctx, dpth - 1)
+                        if (ctx.skipped(obj)) {
+                            break
+                        }
                     } finally {
                         ctx.pop()
                     }
@@ -159,24 +162,21 @@ function walker(...pth: Path[]): Walker {
         let current_wks = toWalker(current)
         let rest_wks = walker(...rest)
         return function* wk(obj: any, ctx: Context): Generator<Property> {
-            if (isPassivePath(current)) {
-                // filter out function component, 
-                // so that it won't call itself recursively
-                // when ctx.accessor() is used within the function component
-                ctx.push(current)
-            }
+            ctx.push(obj, current)
             try {
                 for (let result of current_wks(obj, ctx)) {
                     if (rest.length > 0) {
+                        //pass the returned value on to the rest function
                         yield* rest_wks(result, ctx)
                     } else {
                         yield result
                     }
+                    if (ctx.skipped(obj)) {
+                        break
+                    }
                 }
             } finally {
-                if (isPassivePath(current)) {
-                    ctx.pop()
-                }
+                ctx.pop()
             }
         }
     }
