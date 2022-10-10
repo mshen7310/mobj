@@ -1,4 +1,5 @@
 import { Context } from "./context"
+import { isGenerator } from "./gonad"
 
 export type Walkable = object
 export function isWalkable(v: any): v is Walkable {
@@ -59,9 +60,10 @@ function isPath(p: any): p is Path {
 export function isPassivePath(p: any): p is Exclude<Path, WalkerFn> {
     return typeof p !== 'function' && isPath(p)
 }
-
+function fromGeneratorFn(x: any): boolean {
+    return isGenerator(x) && !Array.isArray(x) && !(x instanceof Map) && !(x instanceof Set)
+}
 export type ActionFn = (root: any, ...rest: Path[]) => any
-const WalkerSymbol = Symbol.for('WalkerSymbol')
 export function search(fn: WalkerFn, depth: number = Infinity): Walker {
     function* children(obj: any): Generator<[Exclude<Path, WalkerFn>, any]> {
         if (obj instanceof Map) {
@@ -84,10 +86,12 @@ export function search(fn: WalkerFn, depth: number = Infinity): Walker {
         }
     }
     let skip = new WeakSet()
-    function* walk(obj: any, ctx: Context, dpth: number = depth): Generator<Property> {
+    return function* walk(obj: any, ctx: Context, dpth: number = depth): Generator<Property> {
         if (!skip.has(obj)) {
             let result = fn(obj, ctx)
-            if (result !== undefined) {
+            if (fromGeneratorFn(result)) {
+                yield* result
+            } else if (result !== undefined) {
                 yield result
             }
             if (typeof obj === 'object' && obj !== null) {
@@ -108,8 +112,6 @@ export function search(fn: WalkerFn, depth: number = Infinity): Walker {
             }
         }
     }
-    walk[WalkerSymbol] = true
-    return walk
 }
 
 
@@ -117,13 +119,11 @@ function toWalker(fieldName: Path): Walker {
     if (typeof fieldName === 'function') {
         // Path is Walker
         return function* (obj: any, ctx: Context): Generator<Property> {
-            if (fieldName[WalkerSymbol]) {
-                yield* fieldName(obj, ctx);
-            } else {
-                let ret = fieldName(obj, ctx)
-                if (ret !== undefined) {
-                    yield ret
-                }
+            let result = fieldName(obj, ctx)
+            if (fromGeneratorFn(result)) {
+                yield* result
+            } else if (result !== undefined) {
+                yield result
             }
         }
     } else if (isSetKey(fieldName)) {
@@ -159,12 +159,12 @@ function walker(...pth: Path[]): Walker {
         return function* wk(obj: any, ctx: Context): Generator<Property> {
             ctx.push(obj, current)
             try {
-                for (let result of current_wks(obj, ctx)) {
+                for (let r of current_wks(obj, ctx)) {
                     if (rest.length > 0) {
                         //pass the returned value on to the rest function
-                        yield* rest_wks(result, ctx)
+                        yield* rest_wks(r, ctx)
                     } else {
-                        yield result
+                        yield r
                     }
                     if (ctx.skipped(obj)) {
                         break
@@ -179,16 +179,14 @@ function walker(...pth: Path[]): Walker {
 export function path(act: ActionFn = Array.from, all_path: Path[] = []): any {
     let retFn = new Proxy(() => { }, {
         apply(target, thisArg, argumentsList) {
-            /*
-            let not_path: any[] = argumentsList.filter(x => !isPath(x))
-            let is_path: Path[] = argumentsList.filter(x => isPath(x))
-            /*/
             function isData(x: any) {
+                // set key [number, symbol] cannot be specified by . or [] operator 
+                // e.g. path()[setKey(2)] is illegal 
+                // so set key has to be specified via ()
                 return !isSetKey(x) && typeof x !== 'function'
             }
             let not_path: any[] = argumentsList.filter(x => isData(x))
             let is_path: Path[] = argumentsList.filter(x => !isData(x))
-            //*/
             all_path = all_path.concat(is_path)
             if (is_path.length > 0 && not_path.length === 0) {
                 return retFn

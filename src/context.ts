@@ -1,8 +1,7 @@
-import { fromUnixTime } from "date-fns";
 import { Path, path, isPassivePath, search } from "./search";
 import { Matcher } from "./types"
 
-function equal(x, y) {
+function shallowEqual(x, y) {
     if (x === y || (Number.isNaN(x) && Number.isNaN(y))) {
         return true
     } else if (typeof x !== typeof y || typeof x !== 'object') {
@@ -13,7 +12,7 @@ function equal(x, y) {
         return x.toString() === y.toString()
     }
 }
-const diffClass = (a, b, ...cls) => cls.reduce((r, c) => r || (a instanceof c && !(b instanceof c)), false)
+export const diffClass = (a, b, ...cls) => cls.reduce((r, c) => r || (a instanceof c && !(b instanceof c)), false)
 
 function deepHas(set: Set<any>, e: object): boolean {
     for (let element of set) {
@@ -25,13 +24,13 @@ function deepHas(set: Set<any>, e: object): boolean {
 }
 
 export function deepEqual(x, y): boolean {
-    const is_equal = equal(x, y)
+    const is_equal = shallowEqual(x, y)
     if (is_equal !== undefined) {
         return is_equal
     }
     const p = path()(search((obj, ctx) => {
         const peer = ctx.accessor()(y)
-        const equal_primitive = equal(obj, peer)
+        const equal_primitive = shallowEqual(obj, peer)
         if (false === equal_primitive) {
             ctx.cancel()
             return false

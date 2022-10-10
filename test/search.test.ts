@@ -282,3 +282,45 @@ describe('path', () => {
         }])
     })
 })
+
+describe('path', () => {
+    it(`should work with number`, () => {
+        assert.deepEqual(path()(1), [1])
+    })
+    it(`should work with boolean`, () => {
+        assert.deepEqual(path()(true), [true])
+    })
+    it(`should work with undefined`, () => {
+        assert.deepEqual(path()(undefined), [undefined])
+    })
+    it(`should work with null`, () => {
+        assert.deepEqual(path()(null), [null])
+    })
+    it(`should work with string`, () => {
+        assert.deepEqual(path()('hello'), ['hello'])
+    })
+    it(`should work with date`, () => {
+        let date = new Date()
+        assert.deepEqual(path()(date), [date])
+    })
+    it(`should work with regexp`, () => {
+        assert.deepEqual(path()(/hello/i), [/hello/i])
+    })
+    it(`should work with symbol`, () => {
+        assert.deepEqual(path()(Symbol.for('kkk')), [Symbol.for('kkk')])
+    })
+    it(`should work with bigint`, () => {
+        assert.deepEqual(path()(BigInt(1)), [BigInt(1)])
+    })
+    it(`should work with array`, () => {
+        assert.deepEqual(path()([]), [[]])
+    })
+    it(`should work with object`, () => {
+        assert.deepEqual(path()({}), [{}])
+    })
+    it(`should work with function`, () => {
+        let fn = () => { }
+        assert.deepEqual(path()()(fn), [fn])
+    })
+
+})
