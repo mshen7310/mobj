@@ -1,4 +1,4 @@
-import { Path, path, isPassivePath, search } from "./search";
+import { Path, path, isPassivePath, search, WalkerFn, PassivePath } from "./search";
 import { Matcher } from "./types"
 
 function shallowEqual(x, y) {
@@ -29,7 +29,7 @@ export function deepEqual(x, y): boolean {
         return is_equal
     }
     const p = path()(search((obj, ctx) => {
-        const peer = ctx.accessor()(y)
+        const peer = ctx.accessor()(y)[0]
         const equal_primitive = shallowEqual(obj, peer)
         if (false === equal_primitive) {
             ctx.cancel()
@@ -122,15 +122,18 @@ export class Context {
     getPath(): Path[] {
         return [...this.path]
     }
+    getPassivePath(): PassivePath[] {
+        return this.getPath().filter(isPassivePath)
+    }
     accessor(n: number = 0): (x: any) => any {
         // filter out function component, 
         // so that it won't call itself recursively
         // when ctx.accessor() is used within the function component
-        let tmp = this.getPath().filter(isPassivePath)
+        let tmp = this.getPassivePath()
         if (n > 0) {
-            return (obj: any) => path(Array.from, tmp.slice(0, -n))(obj)[0]
+            return (obj: any) => path(Array.from, tmp.slice(0, -n))(obj)
         } else {
-            return (obj: any) => path(Array.from, tmp)(obj)[0]
+            return (obj: any) => path(Array.from, tmp)(obj)
         }
     }
     var(name?: string | Matcher, matcher?: Matcher): Variable {

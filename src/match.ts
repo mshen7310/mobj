@@ -7,32 +7,44 @@ export type Difference = {
     actual: any
 }
 function shallowEqual(x, y) {
-    if (typeof x !== typeof y && typeof x !== 'function') {
-        return false
-    }
-    if (x === y || (Number.isNaN(x) && Number.isNaN(y))) {
-        return true
-    }
-    if (x instanceof Date && y instanceof Date) {
-        return x.getTime() === y.getTime()
-    }
-    if (x instanceof RegExp && y instanceof RegExp) {
-        return x.toString() === y.toString()
+    if (typeof x !== 'function') {
+        if (typeof x !== typeof y) {
+            return false
+        }
+        if (x === y || (Number.isNaN(x) && Number.isNaN(y))) {
+            return true
+        }
+        if (x instanceof Date && y instanceof Date) {
+            return x.getTime() === y.getTime()
+        }
+        if (x instanceof RegExp && y instanceof RegExp) {
+            return x.toString() === y.toString()
+        }
     }
 }
 
 export function match(pattern) {
     return function* (data) {
         yield* path(a => a)(search((obj, ctx) => {
-            const peer = ctx.accessor()(data)
+            const peerArray = ctx.accessor()(data)
+            if (peerArray.length === 0) {
+                //missing field
+                return {
+                    path: ctx.getPassivePath(),
+                    expected: obj,
+                }
+            }
+            const peer = peerArray[0]
             const equal_primitive = shallowEqual(obj, peer)
             if (false === equal_primitive) {
+                //primitive and different
                 return {
-                    path: ctx.getPath(),
+                    path: ctx.getPassivePath(),
                     expected: obj,
                     actual: peer
                 }
-            } else if (undefined === equal_primitive) {
+            }
+            if (undefined === equal_primitive) {
                 if (typeof obj === 'function') {
 
                 } else {

@@ -27,7 +27,7 @@ function deepHas(set, e) {
 }
 function deepEqual(x, y) {
     const p = (0, search_1.path)()((0, search_1.search)((obj, ctx) => {
-        const peer = ctx.accessor()(y);
+        const peer = ctx.accessor()(y)[0];
         const equal_primitive = equal(obj, peer);
         if (false === equal_primitive) {
             ctx.cancel();

@@ -255,12 +255,12 @@ describe('path', () => {
         let tmp = path()(search((obj, ctx) => {
             ctx.getPath()
             ctx.accessor(1)
-            assert.deepEqual(ctx.accessor()(data), obj)
+            assert.deepEqual(ctx.accessor()(data)[0], obj)
         })).a(data)
     })
     it(`should pass current path in Context 2`, () => {
         let tmp = path()(search((obj, ctx) => {
-            assert.deepEqual(ctx.accessor()(data2), obj)
+            assert.deepEqual(ctx.accessor()(data2)[0], obj)
         })).a(data2)
     })
     it(`should skip all Set and Map`, () => {
