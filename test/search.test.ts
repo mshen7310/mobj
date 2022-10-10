@@ -79,11 +79,8 @@ describe('path', () => {
     it(`should return ${data.work.kkk.hello.world.a}`, () => {
         assert.deepEqual(path().work.kkk.hello.world.a(data), [data.work.kkk.hello.world.a])
     })
-    it(`should return ${data.work.kkk.hello.world.a}`, () => {
-        assert.deepEqual(path()('work', 'kkk', 'hello', 'world').a(data), [data.work.kkk.hello.world.a])
-    })
-    it(`should return ${data.work.kkk.hello.world.a[0]}`, () => {
-        assert.deepEqual(path()('work', 'kkk', 'hello', 'world').a(0, data), [data.work.kkk.hello.world.a[0]])
+    it(`should return ['work']`, () => {
+        assert.deepEqual(path()('work', 'kkk', 'hello', 'world'), ['work'])
     })
     it(`should return ${data[Symbol.for('some_symbol')]}`, () => {
         assert.deepEqual(path()[Symbol.for('some_symbol')](data), [data[Symbol.for('some_symbol')]])
@@ -96,7 +93,7 @@ describe('path', () => {
         assert.deepEqual(path().nothing()(data), [])
     })
     it(`should return ${data['undefined']}`, () => {
-        assert.deepEqual(path().undefined()(data), [])
+        assert.deepEqual(path().undefined()(data), [undefined])
     })
     it(`should return ${data['null']}`, () => {
         assert.deepEqual(path().null()(data), [null])

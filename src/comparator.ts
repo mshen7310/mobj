@@ -7,8 +7,8 @@ export enum CompareResult {
 }
 export function comparator(...p: Path[]): (a: any, b: any) => CompareResult {
     return (a: any, b: any) => {
-        let aa = path()(...p)(a)
-        let bb = path()(...p)(b)
+        let aa = path(Array.from, p)()(a)[0]
+        let bb = path(Array.from, p)()(b)[0]
         if (aa < bb) {
             // console.log(aa, '<', bb)
             return CompareResult.LessThan;

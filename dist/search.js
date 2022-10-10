@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.path = exports.search = exports.isWalkable = void 0;
+exports.path = exports.search = exports.isPassivePath = exports.setKey = exports.isWalkable = void 0;
 const context_1 = require("./context");
 function isWalkable(v) {
     return typeof v === 'object'
@@ -25,8 +25,13 @@ function isWalkable(v) {
         && !(v instanceof Promise);
 }
 exports.isWalkable = isWalkable;
+const SetKeySymbol = Symbol.for('SetKeySymbol');
+function setKey(index) {
+    return [index, SetKeySymbol];
+}
+exports.setKey = setKey;
 function isSetKey(p) {
-    return Array.isArray(p) && p.length === 1 && typeof p[0] === 'number';
+    return Array.isArray(p) && p.length === 2 && typeof p[0] === 'number' && p[1] === SetKeySymbol;
 }
 function isPath(p) {
     switch (typeof p) {
@@ -37,34 +42,41 @@ function isPath(p) {
             return true;
         }
         case 'object': {
-            return Array.isArray(p) && p.length === 1 && typeof p[0] === 'number';
+            return isSetKey(p);
         }
         default: {
+            // it's fine that the next line is not covered by test case 
+            // because non-path will be interpretered as the object to traverse
             return false;
         }
     }
 }
+function isPassivePath(p) {
+    return typeof p !== 'function' && isPath(p);
+}
+exports.isPassivePath = isPassivePath;
 const WalkerSymbol = Symbol.for('WalkerSymbol');
 function search(fn, depth = Infinity) {
     function* children(obj) {
         if (obj instanceof Map) {
             for (let [k, v] of obj) {
-                yield v;
+                yield [k, v];
             }
         }
         else if (obj instanceof Set) {
+            let i = 0;
             for (let v of obj) {
-                yield v;
+                yield [[i++, SetKeySymbol], v];
             }
         }
         else if (Array.isArray(obj)) {
             for (let i = 0; i < obj.length; ++i) {
-                yield obj[i];
+                yield [i, obj[i]];
             }
         }
         else if (isWalkable(obj)) {
             for (let k of Reflect.ownKeys(obj)) {
-                yield obj[k];
+                yield [k, obj[k]];
             }
         }
     }
@@ -78,14 +90,20 @@ function search(fn, depth = Infinity) {
             if (typeof obj === 'object' && obj !== null) {
                 skip.add(obj);
             }
-            if (dpth > 0) {
-                for (let child of children(obj)) {
-                    yield* walk(child, ctx, dpth - 1);
+            if (dpth > 0 && !ctx.skipped(obj)) {
+                for (let [key, child] of children(obj)) {
+                    ctx.push(child, key);
+                    try {
+                        yield* walk(child, ctx, dpth - 1);
+                        if (ctx.skipped(obj)) {
+                            break;
+                        }
+                    }
+                    finally {
+                        ctx.pop();
+                    }
                 }
             }
-        }
-        else {
-            // console.log('skip', obj)
         }
     }
     walk[WalkerSymbol] = true;
@@ -111,7 +129,10 @@ function toWalker(fieldName) {
         // convert Path to a Walker: (any, Environment)=>Generator<Property>
         return function* (obj, ctx) {
             if (obj instanceof Set) {
-                yield [...obj][fieldName[0]];
+                let y = [...obj][fieldName[0]];
+                if (y !== undefined) {
+                    yield y;
+                }
             }
         };
     }
@@ -119,10 +140,16 @@ function toWalker(fieldName) {
         // convert Path to a Walker: (any, Environment)=>Generator<Property>
         return function* (obj, ctx) {
             if (obj instanceof Map) {
-                yield obj.get(fieldName);
+                let y = obj.get(fieldName);
+                if (y !== undefined) {
+                    yield y;
+                }
             }
             else if (obj !== null && obj !== undefined && Reflect.has(obj, fieldName)) {
-                yield obj[fieldName];
+                let y = obj[fieldName];
+                if (y !== undefined) {
+                    yield y;
+                }
             }
         };
     }
@@ -138,23 +165,41 @@ function walker(...pth) {
         let current_wks = toWalker(current);
         let rest_wks = walker(...rest);
         return function* wk(obj, ctx) {
-            for (let result of current_wks(obj, ctx)) {
-                if (rest.length > 0) {
-                    yield* rest_wks(result, ctx);
+            ctx.push(obj, current);
+            try {
+                for (let result of current_wks(obj, ctx)) {
+                    if (rest.length > 0) {
+                        //pass the returned value on to the rest function
+                        yield* rest_wks(result, ctx);
+                    }
+                    else {
+                        yield result;
+                    }
+                    if (ctx.skipped(obj)) {
+                        break;
+                    }
                 }
-                else {
-                    yield result;
-                }
+            }
+            finally {
+                ctx.pop();
             }
         };
     }
+}
+function isData(x) {
+    return !isSetKey(x) && typeof x !== 'function';
 }
 function path(act = Array.from) {
     let all_path = [];
     let retFn = new Proxy(() => { }, {
         apply(target, thisArg, argumentsList) {
-            let not_path = argumentsList.filter(x => !isPath(x));
-            let is_path = argumentsList.filter(x => isPath(x));
+            /*
+            let not_path: any[] = argumentsList.filter(x => !isPath(x))
+            let is_path: Path[] = argumentsList.filter(x => isPath(x))
+            /*/
+            let not_path = argumentsList.filter(x => isData(x));
+            let is_path = argumentsList.filter(x => !isData(x));
+            //*/
             all_path = all_path.concat(is_path);
             if (is_path.length > 0 && not_path.length === 0) {
                 return retFn;

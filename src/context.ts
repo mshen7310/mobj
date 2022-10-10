@@ -1,3 +1,4 @@
+import { fromUnixTime } from "date-fns";
 import { Path, path, isPassivePath, search } from "./search";
 import { Matcher } from "./types"
 
@@ -24,6 +25,10 @@ function deepHas(set: Set<any>, e: object): boolean {
 }
 
 export function deepEqual(x, y): boolean {
+    const is_equal = equal(x, y)
+    if (is_equal !== undefined) {
+        return is_equal
+    }
     const p = path()(search((obj, ctx) => {
         const peer = ctx.accessor()(y)
         const equal_primitive = equal(obj, peer)
@@ -124,9 +129,9 @@ export class Context {
         // when ctx.accessor() is used within the function component
         let tmp = this.getPath().filter(isPassivePath)
         if (n > 0) {
-            return (obj: any) => path()(...tmp.slice(0, -n))(obj)[0]
+            return (obj: any) => path(Array.from, tmp.slice(0, -n))(obj)[0]
         } else {
-            return (obj: any) => path()(...tmp)(obj)[0]
+            return (obj: any) => path(Array.from, tmp)(obj)[0]
         }
     }
     var(name?: string | Matcher, matcher?: Matcher): Variable {

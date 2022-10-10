@@ -25,6 +25,7 @@ export function isWalkable(v: any): v is Walkable {
 }
 export type SetKey = [number, symbol]
 export type Path = symbol | number | string | SetKey | WalkerFn
+export type PassivePath = Exclude<Path, WalkerFn>
 export type Property = any
 export type WalkerFn = (value: any, ctx: Context) => Property
 export type Walker = (value: any, ctx: Context) => Generator<Property>
@@ -49,7 +50,8 @@ function isPath(p: any): p is Path {
         }
         default: {
             // it's fine that the next line is not covered by test case 
-            // because non-path will be interpretered as the object to traverse
+            // because non-path object will be taken as the data to search
+            // 
             return false
         }
     }
@@ -128,25 +130,18 @@ function toWalker(fieldName: Path): Walker {
         // convert Path to a Walker: (any, Environment)=>Generator<Property>
         return function* (obj: any, ctx: Context): Generator<Property> {
             if (obj instanceof Set) {
-                let y = [...obj][fieldName[0]]
-                if (y !== undefined) {
-                    yield y
+                if (fieldName[0] >= 0 && fieldName[0] < obj.size) {
+                    yield [...obj][fieldName[0]]
                 }
             }
         }
     } else {
         // convert Path to a Walker: (any, Environment)=>Generator<Property>
         return function* (obj: any, ctx: Context): Generator<Property> {
-            if (obj instanceof Map) {
-                let y = obj.get(fieldName)
-                if (y !== undefined) {
-                    yield y
-                }
+            if (obj instanceof Map && obj.has(fieldName)) {
+                yield obj.get(fieldName)
             } else if (obj !== null && obj !== undefined && Reflect.has(obj, fieldName)) {
-                let y = obj[fieldName]
-                if (y !== undefined) {
-                    yield y
-                }
+                yield obj[fieldName]
             }
         }
     }
@@ -181,12 +176,19 @@ function walker(...pth: Path[]): Walker {
         }
     }
 }
-export function path(act: ActionFn = Array.from): any {
-    let all_path = []
+export function path(act: ActionFn = Array.from, all_path: Path[] = []): any {
     let retFn = new Proxy(() => { }, {
         apply(target, thisArg, argumentsList) {
+            /*
             let not_path: any[] = argumentsList.filter(x => !isPath(x))
             let is_path: Path[] = argumentsList.filter(x => isPath(x))
+            /*/
+            function isData(x: any) {
+                return !isSetKey(x) && typeof x !== 'function'
+            }
+            let not_path: any[] = argumentsList.filter(x => isData(x))
+            let is_path: Path[] = argumentsList.filter(x => !isData(x))
+            //*/
             all_path = all_path.concat(is_path)
             if (is_path.length > 0 && not_path.length === 0) {
                 return retFn
