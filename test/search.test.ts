@@ -2,6 +2,7 @@ import { path, search, setKey } from '../src/search'
 import 'mocha'
 import { strict as assert } from 'node:assert';
 import { fi } from 'date-fns/locale';
+import { variable } from '../src/search';
 
 const data = {
     [Symbol.for('some_symbol')]: 12,
@@ -209,21 +210,22 @@ describe('path', () => {
 
 describe('path', () => {
     it(`should work with environment and variable`, () => {
+        let hello = variable()
         let p = path()((obj, env) => {
-            env.var('hello')(5)
+            hello(5)
             return {
                 a: 5,
                 b: 'kkk'
             }
         })((obj, env) => {
-            let v = env.var('hello')
+            let v = hello
             if (v(obj.a)) {
                 return obj
             }
         })
         assert.deepEqual(p({}), [{ a: 5, b: 'kkk' }])
         let pp = p((obj, env) => {
-            let v = env.var('hello')
+            let v = hello
             if (v(obj.b)) {
                 return obj
             }

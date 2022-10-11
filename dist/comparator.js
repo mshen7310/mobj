@@ -10,8 +10,8 @@ var CompareResult;
 })(CompareResult = exports.CompareResult || (exports.CompareResult = {}));
 function comparator(...p) {
     return (a, b) => {
-        let aa = (0, search_1.path)()(...p)(a);
-        let bb = (0, search_1.path)()(...p)(b);
+        let aa = (0, search_1.path)(Array.from, p)()(a)[0];
+        let bb = (0, search_1.path)(Array.from, p)()(b)[0];
         if (aa < bb) {
             // console.log(aa, '<', bb)
             return CompareResult.LessThan;

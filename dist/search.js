@@ -1,7 +1,84 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.path = exports.search = exports.isPassivePath = exports.setKey = exports.isWalkable = void 0;
-const context_1 = require("./context");
+exports.path = exports.search = exports.fromGeneratorFn = exports.isPassivePath = exports.asGenerator = exports.setKey = exports.isWalkable = exports.Context = exports.variable = void 0;
+const deepEqual_1 = require("./deepEqual");
+const gonad_1 = require("./gonad");
+function variable(matcher) {
+    let value;
+    let empty = true;
+    matcher = matcher ? matcher : () => true;
+    function ret(...arg) {
+        if (arg.length === 0) {
+            return value;
+        }
+        else if (empty && matcher(arg[0])) {
+            value = arg[0];
+            empty = false;
+            return true;
+        }
+        else if (!empty) {
+            return (0, deepEqual_1.deepEqual)(value, arg[0]);
+        }
+        else {
+            return false;
+        }
+    }
+    Object.defineProperty(ret, 'value', {
+        get: () => value
+    });
+    Object.defineProperty(ret, 'empty', {
+        get: () => empty
+    });
+    return ret;
+}
+exports.variable = variable;
+class Context {
+    constructor() {
+        this.skip_node = new WeakSet();
+        this.path = [];
+        this.node = [];
+    }
+    skip(a) {
+        if (typeof a === 'object' && a !== null) {
+            this.skip_node.add(a);
+        }
+    }
+    cancel() {
+        for (let n of this.node) {
+            this.skip(n);
+        }
+    }
+    skipped(a) {
+        return this.skip_node.has(a);
+    }
+    push(node, p) {
+        this.node.push(node);
+        return this.path.push(p);
+    }
+    pop() {
+        this.node.pop;
+        return this.path.pop();
+    }
+    getPath() {
+        return [...this.path];
+    }
+    getPassivePath() {
+        return this.getPath().filter(isPassivePath);
+    }
+    accessor(n = 0) {
+        // filter out function component, 
+        // so that it won't call itself recursively
+        // when ctx.accessor() is used within the function component
+        let tmp = this.getPassivePath();
+        if (n > 0) {
+            return (obj) => path(Array.from, tmp.slice(0, -n))()(obj);
+        }
+        else {
+            return (obj) => path(Array.from, tmp)()(obj);
+        }
+    }
+}
+exports.Context = Context;
 function isWalkable(v) {
     return typeof v === 'object'
         && v !== null
@@ -46,16 +123,29 @@ function isPath(p) {
         }
         default: {
             // it's fine that the next line is not covered by test case 
-            // because non-path will be interpretered as the object to traverse
+            // because non-path object will be taken as the data to search
+            // 
             return false;
         }
     }
 }
+function* asGenerator(result) {
+    if (fromGeneratorFn(result)) {
+        yield* result;
+    }
+    else if (result !== undefined) {
+        yield result;
+    }
+}
+exports.asGenerator = asGenerator;
 function isPassivePath(p) {
     return typeof p !== 'function' && isPath(p);
 }
 exports.isPassivePath = isPassivePath;
-const WalkerSymbol = Symbol.for('WalkerSymbol');
+function fromGeneratorFn(x) {
+    return (0, gonad_1.isGenerator)(x) && !Array.isArray(x) && !(x instanceof Map) && !(x instanceof Set);
+}
+exports.fromGeneratorFn = fromGeneratorFn;
 function search(fn, depth = Infinity) {
     function* children(obj) {
         if (obj instanceof Map) {
@@ -81,12 +171,9 @@ function search(fn, depth = Infinity) {
         }
     }
     let skip = new WeakSet();
-    function* walk(obj, ctx, dpth = depth) {
+    return function* walk(obj, ctx, dpth = depth) {
         if (!skip.has(obj)) {
-            let result = fn(obj, ctx);
-            if (result !== undefined) {
-                yield result;
-            }
+            yield* asGenerator(fn(obj, ctx));
             if (typeof obj === 'object' && obj !== null) {
                 skip.add(obj);
             }
@@ -105,33 +192,22 @@ function search(fn, depth = Infinity) {
                 }
             }
         }
-    }
-    walk[WalkerSymbol] = true;
-    return walk;
+    };
 }
 exports.search = search;
 function toWalker(fieldName) {
     if (typeof fieldName === 'function') {
         // Path is Walker
         return function* (obj, ctx) {
-            if (fieldName[WalkerSymbol]) {
-                yield* fieldName(obj, ctx);
-            }
-            else {
-                let ret = fieldName(obj, ctx);
-                if (ret !== undefined) {
-                    yield ret;
-                }
-            }
+            yield* asGenerator(fieldName(obj, ctx));
         };
     }
     else if (isSetKey(fieldName)) {
         // convert Path to a Walker: (any, Environment)=>Generator<Property>
         return function* (obj, ctx) {
             if (obj instanceof Set) {
-                let y = [...obj][fieldName[0]];
-                if (y !== undefined) {
-                    yield y;
+                if (fieldName[0] >= 0 && fieldName[0] < obj.size) {
+                    yield [...obj][fieldName[0]];
                 }
             }
         };
@@ -139,17 +215,11 @@ function toWalker(fieldName) {
     else {
         // convert Path to a Walker: (any, Environment)=>Generator<Property>
         return function* (obj, ctx) {
-            if (obj instanceof Map) {
-                let y = obj.get(fieldName);
-                if (y !== undefined) {
-                    yield y;
-                }
+            if (obj instanceof Map && obj.has(fieldName)) {
+                yield obj.get(fieldName);
             }
             else if (obj !== null && obj !== undefined && Reflect.has(obj, fieldName)) {
-                let y = obj[fieldName];
-                if (y !== undefined) {
-                    yield y;
-                }
+                yield obj[fieldName];
             }
         };
     }
@@ -167,13 +237,13 @@ function walker(...pth) {
         return function* wk(obj, ctx) {
             ctx.push(obj, current);
             try {
-                for (let result of current_wks(obj, ctx)) {
+                for (let r of current_wks(obj, ctx)) {
                     if (rest.length > 0) {
                         //pass the returned value on to the rest function
-                        yield* rest_wks(result, ctx);
+                        yield* rest_wks(r, ctx);
                     }
                     else {
-                        yield result;
+                        yield r;
                     }
                     if (ctx.skipped(obj)) {
                         break;
@@ -186,20 +256,17 @@ function walker(...pth) {
         };
     }
 }
-function isData(x) {
-    return !isSetKey(x) && typeof x !== 'function';
-}
-function path(act = Array.from) {
-    let all_path = [];
+function path(act = Array.from, all_path = []) {
     let retFn = new Proxy(() => { }, {
         apply(target, thisArg, argumentsList) {
-            /*
-            let not_path: any[] = argumentsList.filter(x => !isPath(x))
-            let is_path: Path[] = argumentsList.filter(x => isPath(x))
-            /*/
+            function isData(x) {
+                // set key [number, symbol] cannot be specified by . or [] operator 
+                // e.g. path()[setKey(2)] is illegal 
+                // so set key has to be specified via ()
+                return !isSetKey(x) && typeof x !== 'function';
+            }
             let not_path = argumentsList.filter(x => isData(x));
             let is_path = argumentsList.filter(x => !isData(x));
-            //*/
             all_path = all_path.concat(is_path);
             if (is_path.length > 0 && not_path.length === 0) {
                 return retFn;
@@ -211,12 +278,12 @@ function path(act = Array.from) {
                 return afrw;
             }
             if (is_path.length === 0 && not_path.length === 0) {
-                return function (obj, ctx = new context_1.Context()) {
+                return function (obj, ctx = new Context()) {
                     return call_walker(obj, ctx);
                 };
             }
             else {
-                return call_walker(not_path[0], not_path[1] instanceof context_1.Context ? not_path[1] : new context_1.Context());
+                return call_walker(not_path[0], not_path[1] instanceof Context ? not_path[1] : new Context());
             }
         },
         get(_target, prop, receiver) {

@@ -8,9 +8,9 @@
     "/dist"
   ],
   "scripts": {
-    "build": "tsc",
-    "test": "nyc mocha -r ts-node/register test/**/*.ts",
-    "doc": "npx ts-docs"
+    "build": "rm -rf dist; tsc",
+    "test": "rm *.cpuprofile; nyc mocha -r ts-node/register test/**/*.ts",
+    "doc": "rm -rf docs; npx ts-docs"
   },
   "repository": {
     "type": "git",

@@ -1,6 +1,6 @@
 import 'mocha'
 import { strict as assert } from 'node:assert';
-import { deepEqual } from '../src/context';
+import { deepEqual } from '../src/deepEqual';
 
 
 

@@ -1,13 +1,25 @@
 
 import { fromGeneratorFn, PassivePath, path, search, setKey } from "./search";
+import { Differ } from "./types";
 
 export type Difference = {
     path: PassivePath[]
-    expected: any
-    actual: any
+    type: 'missing' | 'redundant' | 'discrepancy'
+    expected?: any
+    actual?: any
+    info?: any
+}
+function isDifference(x: any): x is Difference {
+    return typeof x === 'object'
+        && x !== null
+        && Array.isArray(x.path)
+        && typeof x.type === 'string'
 }
 function shallowEqual(x, y) {
     if (typeof x !== 'function') {
+        if (x instanceof RegExp && typeof y === 'string') {
+            return x.test(y)
+        }
         if (typeof x !== typeof y) {
             return false
         }
@@ -47,13 +59,13 @@ export function match(pattern) {
     return function* (data?: any) {
         yield* path(a => a)(search(function* (obj, ctx) {
             const peerArray = ctx.accessor()(data)
-
             // console.log(peerArray, ctx.getPath())
             if (peerArray.length === 0) {
                 //missing field
                 ctx.skip(obj)
                 yield {
                     path: ctx.getPassivePath(),
+                    type: 'missing',
                     expected: obj,
                 }
             } else {
@@ -65,19 +77,29 @@ export function match(pattern) {
                     ctx.skip(obj)
                     yield {
                         path: ctx.getPassivePath(),
+                        type: 'discrepancy',
                         expected: obj,
                         actual: peer
                     }
                 } else if (undefined === equal_primitive) {
                     if (typeof obj === 'function') {
+                        ctx.skip(obj)
                         let tmp = obj(peer)
                         if (fromGeneratorFn(tmp)) {
-                            yield* tmp
+                            for (let rec of tmp) {
+                                if (isDifference(rec)) {
+                                    yield { ...rec, path: ctx.getPassivePath().concat(rec.path) }
+                                } else {
+                                    yield rec
+                                }
+                            }
                         } else if (tmp === false) {
                             yield {
                                 path: ctx.getPassivePath(),
+                                type: 'discrepancy',
                                 expected: obj,
-                                actual: peer
+                                actual: peer,
+                                info: obj.toString()
                             }
                         }
                     } else if (obj instanceof Set && peer instanceof Set) {
@@ -88,12 +110,14 @@ export function match(pattern) {
                                     if (!deepMatch(peer, xi)) {
                                         yield {
                                             path: ctx.getPassivePath().concat([setKey(x_index)]),
+                                            type: 'missing',
                                             expected: xi
                                         }
                                     }
                                 } else {
                                     yield {
                                         path: ctx.getPassivePath().concat([setKey(x_index)]),
+                                        type: 'missing',
                                         expected: xi
                                     }
                                 }

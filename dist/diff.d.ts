@@ -1,15 +1,7 @@
-import { Path } from "./search";
-export declare enum FieldType {
-    Struct = "Struct",
-    Array = "Array",
-    Replace = "Replace"
-}
-export declare type Diff = {
-    key?: Path[];
-    type: FieldType;
-    delta: {
-        pattern?: any;
-        data?: any;
-    } | Diff[];
-    comment?: any;
+import { PassivePath } from "./search";
+export declare type Difference = {
+    path: PassivePath[];
+    expected: any;
+    actual: any;
 };
+export declare function match(a: any, b: any): Generator<never, void, unknown>;
