@@ -1,7 +1,6 @@
 import 'mocha'
 import { strict as assert } from 'node:assert';
-import { variable } from '../src/search';
-import { match } from '../src/match'
+import { match, variable } from '../src/match'
 import { setKey } from '../src/search';
 describe('match(pattern)(data) shallow comparison', () => {
     const primitivePattern = (p) => (x, result?: boolean) => {
@@ -462,6 +461,17 @@ describe('match(pattern)(data) function comparison', () => {
     const pattern = (p) => (x, difference: any[] = []) => {
         assert.deepEqual(Array.from(match(p)(x)), difference)
     }
+    it('pattern contains primitive values', () => {
+        let fn = (x) => x === 2
+        const diff = pattern(fn)
+        diff({}, [{
+            path: [],
+            expected: fn,
+            actual: {},
+            info: '(x) => x === 2',
+            type: 'discrepancy'
+        }])
+    })
     it('pattern contains primitive values', () => {
         let fn = (x) => x === 2
         const diff = pattern([

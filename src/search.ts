@@ -1,35 +1,8 @@
-import { deepEqual } from "./deepEqual";
-import { isGenerator } from "./gonad"
-
-import { Matcher } from "./types"
-
-export type Variable = <T>(...value: T[]) => boolean
-
-
-export function variable(matcher?: Matcher): Variable {
-    let value: any;
-    let empty: boolean = true
-    matcher = matcher ? matcher : () => true
-    function ret<T>(...arg: T[]): boolean {
-        if (arg.length === 0) {
-            return value
-        } else if (empty && matcher(arg[0])) {
-            value = arg[0]
-            empty = false
-            return true
-        } else if (!empty) {
-            return deepEqual(value, arg[0])
-        } else {
-            return false
-        }
-    }
-    Object.defineProperty(ret, 'value', {
-        get: () => value
-    })
-    Object.defineProperty(ret, 'empty', {
-        get: () => empty
-    })
-    return ret
+export function isGenerator(fn: any): fn is Generator {
+    return fn !== undefined
+        && fn !== null
+        && typeof fn === 'object'
+        && typeof fn[Symbol.iterator] === 'function'
 }
 export class Context {
     private readonly skip_node = new WeakSet()
@@ -147,7 +120,7 @@ export function fromGeneratorFn(x: any): boolean {
 }
 export type ActionFn = (root: any, ...rest: Path[]) => any
 export function search(fn: WalkerFn, depth: number = Infinity): Walker {
-    function* children(obj: any): Generator<[Exclude<Path, WalkerFn>, any]> {
+    function* children(obj: any): Generator<readonly [Exclude<Path, WalkerFn>, any]> {
         if (obj instanceof Map) {
             for (let [k, v] of obj) {
                 yield [k, v]

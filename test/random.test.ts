@@ -13,7 +13,7 @@ describe('initRandomSeed', () => {
         assert.equal(typeof random(), 'number')
     })
     it('should use Math.random generator', () => {
-        initRandomSeed(null)
+        initRandomSeed(null as any)
         assert.equal(typeof random(), 'number')
     })
     it('should use default generator', () => {
@@ -39,7 +39,7 @@ describe('anyOf', () => {
 describe('numberOf', () => {
     it(`should return a number > 100`, () => {
         initRandomSeed('random', 1)
-        let tmp = []
+        let tmp: any[] = []
         let start = 100
         let end = 200
         for (let i = 0; i < 200; ++i) {
@@ -49,7 +49,7 @@ describe('numberOf', () => {
     })
     it(`should return a number < 200`, () => {
         initRandomSeed('random', 2)
-        let tmp = []
+        let tmp: any[] = []
         let start = 100
         let end = 200
         for (let i = 0; i < 200; ++i) {
@@ -59,7 +59,7 @@ describe('numberOf', () => {
     })
     it(`should ensure start < end`, () => {
         initRandomSeed('random', 3)
-        let tmp = []
+        let tmp: any[] = []
         let start = 200
         let end = 100
         for (let i = 0; i < 200; ++i) {
@@ -68,7 +68,7 @@ describe('numberOf', () => {
         assert.deepEqual(tmp.filter(x => x >= start).length, 0)
     })
     it(`should return a number between [0, start]`, () => {
-        let tmp = []
+        let tmp: any[] = []
         let start = 200
         let end = 100
         for (let i = 0; i < 200; ++i) {
@@ -82,7 +82,7 @@ describe('numberOf', () => {
 describe('elementOf', () => {
     it(`should return an element from array`, () => {
         let tmp = [...Array(10).keys()].sort()
-        let result = []
+        let result: any[] = []
         for (let i = 0; i < 200; ++i) {
             result.push(elementOf(tmp))
         }
@@ -90,7 +90,7 @@ describe('elementOf', () => {
     })
     it(`should return a field from object`, () => {
         let tmp = { a: 1, b: 2, c: 3, d: 4, e: 5, f: 6, g: 7 }
-        let result = []
+        let result: any[] = []
         for (let i = 0; i < 200; ++i) {
             result.push(elementOf(tmp))
         }
@@ -105,7 +105,7 @@ describe('elementOf', () => {
 describe('intOf', () => {
     it(`should return a number between [start, end]`, () => {
         let tmp = [...Array(11).keys()].sort()
-        let result = []
+        let result: any[] = []
         for (let i = 0; i < 200; ++i) {
             result.push(intOf(0, tmp.length - 1))
         }
@@ -113,7 +113,7 @@ describe('intOf', () => {
     })
     it(`should ensure start < end`, () => {
         let tmp = [...Array(11).keys()].sort()
-        let result = []
+        let result: any[] = []
         for (let i = 0; i < 200; ++i) {
             result.push(intOf(tmp.length - 1, 0))
         }
@@ -121,7 +121,7 @@ describe('intOf', () => {
     })
     it(`should return a number between [0, start]`, () => {
         let tmp = [...Array(11).keys()].sort()
-        let result = []
+        let result: any[] = []
         for (let i = 0; i < 200; ++i) {
             result.push(intOf(tmp.length - 1))
         }
@@ -132,7 +132,7 @@ describe('intOf', () => {
 describe('bigintOf', () => {
     it(`should return a number between [start, end]`, () => {
         let tmp = [...Array(11).keys()].map(i => BigInt(i)).sort()
-        let result = []
+        let result: any[] = []
         for (let i = 0; i < 200; ++i) {
             result.push(bigintOf(BigInt(0), BigInt(tmp.length - 1)))
         }
@@ -141,7 +141,7 @@ describe('bigintOf', () => {
     })
     it(`should make sure start < end`, () => {
         let tmp = [...Array(11).keys()].map(i => BigInt(i)).sort()
-        let result = []
+        let result: any[] = []
         for (let i = 0; i < 200; ++i) {
             result.push(bigintOf(BigInt(tmp.length - 1), BigInt(0)))
         }
@@ -151,7 +151,7 @@ describe('bigintOf', () => {
 
     it(`should return a number between [0, start]`, () => {
         let tmp = [...Array(11).keys()].sort().map(i => BigInt(i))
-        let result = []
+        let result: any[] = []
         let start: bigint = BigInt(tmp.length - 1)
         for (let i = 0; i < 200; ++i) {
             result.push(bigintOf(start))

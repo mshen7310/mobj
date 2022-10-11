@@ -1,37 +1,13 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.path = exports.search = exports.fromGeneratorFn = exports.isPassivePath = exports.asGenerator = exports.setKey = exports.isWalkable = exports.Context = exports.variable = void 0;
-const deepEqual_1 = require("./deepEqual");
-const gonad_1 = require("./gonad");
-function variable(matcher) {
-    let value;
-    let empty = true;
-    matcher = matcher ? matcher : () => true;
-    function ret(...arg) {
-        if (arg.length === 0) {
-            return value;
-        }
-        else if (empty && matcher(arg[0])) {
-            value = arg[0];
-            empty = false;
-            return true;
-        }
-        else if (!empty) {
-            return (0, deepEqual_1.deepEqual)(value, arg[0]);
-        }
-        else {
-            return false;
-        }
-    }
-    Object.defineProperty(ret, 'value', {
-        get: () => value
-    });
-    Object.defineProperty(ret, 'empty', {
-        get: () => empty
-    });
-    return ret;
+exports.path = exports.search = exports.fromGeneratorFn = exports.isPassivePath = exports.asGenerator = exports.setKey = exports.isWalkable = exports.Context = exports.isGenerator = void 0;
+function isGenerator(fn) {
+    return fn !== undefined
+        && fn !== null
+        && typeof fn === 'object'
+        && typeof fn[Symbol.iterator] === 'function';
 }
-exports.variable = variable;
+exports.isGenerator = isGenerator;
 class Context {
     constructor() {
         this.skip_node = new WeakSet();
@@ -143,7 +119,7 @@ function isPassivePath(p) {
 }
 exports.isPassivePath = isPassivePath;
 function fromGeneratorFn(x) {
-    return (0, gonad_1.isGenerator)(x) && !Array.isArray(x) && !(x instanceof Map) && !(x instanceof Set);
+    return isGenerator(x) && !Array.isArray(x) && !(x instanceof Map) && !(x instanceof Set);
 }
 exports.fromGeneratorFn = fromGeneratorFn;
 function search(fn, depth = Infinity) {

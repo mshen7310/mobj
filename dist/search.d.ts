@@ -1,6 +1,4 @@
-import { Matcher } from "./types";
-export declare type Variable = <T>(...value: T[]) => boolean;
-export declare function variable(matcher?: Matcher): Variable;
+export declare function isGenerator(fn: any): fn is Generator;
 export declare class Context {
     private readonly skip_node;
     private readonly path;

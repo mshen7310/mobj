@@ -1,8 +1,8 @@
 import { path, search, setKey } from '../src/search'
+import { variable } from '../src/match';
+
 import 'mocha'
 import { strict as assert } from 'node:assert';
-import { fi } from 'date-fns/locale';
-import { variable } from '../src/search';
 
 const data = {
     [Symbol.for('some_symbol')]: 12,
