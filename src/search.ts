@@ -24,7 +24,7 @@ export function isWalkable(v: any): v is Walkable {
         && !(v instanceof TransformStream)
         && !(v instanceof Promise)
 }
-export type SetKey = [number, symbol]
+export type SetKey = readonly [number, symbol]
 export type Path = symbol | number | string | SetKey | WalkerFn
 export type PassivePath = Exclude<Path, WalkerFn>
 export type Property = any
@@ -57,10 +57,17 @@ function isPath(p: any): p is Path {
         }
     }
 }
+export function* asGenerator(result: any) {
+    if (fromGeneratorFn(result)) {
+        yield* result
+    } else if (result !== undefined) {
+        yield result
+    }
+}
 export function isPassivePath(p: any): p is Exclude<Path, WalkerFn> {
     return typeof p !== 'function' && isPath(p)
 }
-function fromGeneratorFn(x: any): boolean {
+export function fromGeneratorFn(x: any): boolean {
     return isGenerator(x) && !Array.isArray(x) && !(x instanceof Map) && !(x instanceof Set)
 }
 export type ActionFn = (root: any, ...rest: Path[]) => any
@@ -88,12 +95,7 @@ export function search(fn: WalkerFn, depth: number = Infinity): Walker {
     let skip = new WeakSet()
     return function* walk(obj: any, ctx: Context, dpth: number = depth): Generator<Property> {
         if (!skip.has(obj)) {
-            let result = fn(obj, ctx)
-            if (fromGeneratorFn(result)) {
-                yield* result
-            } else if (result !== undefined) {
-                yield result
-            }
+            yield* asGenerator(fn(obj, ctx))
             if (typeof obj === 'object' && obj !== null) {
                 skip.add(obj)
             }
@@ -119,12 +121,7 @@ function toWalker(fieldName: Path): Walker {
     if (typeof fieldName === 'function') {
         // Path is Walker
         return function* (obj: any, ctx: Context): Generator<Property> {
-            let result = fieldName(obj, ctx)
-            if (fromGeneratorFn(result)) {
-                yield* result
-            } else if (result !== undefined) {
-                yield result
-            }
+            yield* asGenerator(fieldName(obj, ctx))
         }
     } else if (isSetKey(fieldName)) {
         // convert Path to a Walker: (any, Environment)=>Generator<Property>

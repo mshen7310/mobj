@@ -10,9 +10,10 @@ function shallowEqual(x, y) {
         return x.getTime() === y.getTime()
     } else if (x instanceof RegExp && y instanceof RegExp) {
         return x.toString() === y.toString()
+    } else if (x.constructor !== y.constructor) {
+        return false
     }
 }
-export const diffClass = (a, b, ...cls) => cls.reduce((r, c) => r || (a instanceof c && !(b instanceof c)), false)
 
 function deepHas(set: Set<any>, e: object): boolean {
     for (let element of set) {
@@ -36,8 +37,7 @@ export function deepEqual(x, y): boolean {
             return false
         } else if (undefined === equal_primitive) {
             if (
-                diffClass(obj, peer, Set, Map, Array)
-                || (obj instanceof Map && peer instanceof Map && obj.size !== peer.size)
+                (obj instanceof Map && peer instanceof Map && obj.size !== peer.size)
                 || (Array.isArray(obj) && Array.isArray(peer) && obj.length !== peer.length)
                 || (obj instanceof Set && peer instanceof Set && obj.size !== peer.size)
                 || (Reflect.ownKeys(obj).length !== Reflect.ownKeys(peer).length)
@@ -131,9 +131,9 @@ export class Context {
         // when ctx.accessor() is used within the function component
         let tmp = this.getPassivePath()
         if (n > 0) {
-            return (obj: any) => path(Array.from, tmp.slice(0, -n))(obj)
+            return (obj: any) => path(Array.from, tmp.slice(0, -n))()(obj)
         } else {
-            return (obj: any) => path(Array.from, tmp)(obj)
+            return (obj: any) => path(Array.from, tmp)()(obj)
         }
     }
     var(name?: string | Matcher, matcher?: Matcher): Variable {

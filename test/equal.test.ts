@@ -55,6 +55,10 @@ describe(`deepEqual compares primitive values`, () => {
         assert.equal(deepEqual(/hello/i, /hello/i), true)
         assert.equal(deepEqual(/hello/i, /world/i), false)
     })
+    it(`should work with function`, () => {
+        let fn = a => a
+        assert.equal(deepEqual([{ path: [], expected: 1, actual: fn }], [{ path: [], expected: 1, actual: fn }]), true)
+    })
 
 })
 
