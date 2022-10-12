@@ -1,8 +1,8 @@
 import 'mocha'
 import { strict as assert } from 'node:assert';
-import { diff, variable } from '../src/diff'
+import { diff, optional, variable } from '../src/diff'
 import { setKey } from '../src/search';
-describe('match(pattern)(data) shallow comparison', () => {
+describe('diff(pattern)(data) shallow comparison', () => {
     const primitivePattern = (p) => (x, result?: boolean) => {
         if (result === true) {
             assert.deepEqual(Array.from(diff(p)(x)), [])
@@ -266,7 +266,7 @@ describe('match(pattern)(data) shallow comparison', () => {
     })
 })
 
-describe('match(pattern)(data) Set comparison', () => {
+describe('diff(pattern)(data) Set comparison', () => {
     const pattern = (p) => (x, difference: any[] = []) => {
         assert.deepEqual(Array.from(diff(p)(x)), difference)
     }
@@ -304,7 +304,7 @@ describe('match(pattern)(data) Set comparison', () => {
 
 })
 
-describe('match(pattern)(data) Map comparison', () => {
+describe('diff(pattern)(data) Map comparison', () => {
     const pattern = (p) => (x, difference: any[] = []) => {
         assert.deepEqual(Array.from(diff(p)(x)), difference)
     }
@@ -346,7 +346,7 @@ describe('match(pattern)(data) Map comparison', () => {
 
 })
 
-describe('match(pattern)(data) object comparison', () => {
+describe('diff(pattern)(data) object comparison', () => {
     const pattern = (p) => (x, difference: any[] = []) => {
         assert.deepEqual(Array.from(diff(p)(x)), difference)
     }
@@ -391,7 +391,7 @@ describe('match(pattern)(data) object comparison', () => {
 
 })
 
-describe('match(pattern)(data) array comparison', () => {
+describe('diff(pattern)(data) array comparison', () => {
     const pattern = (p) => (x, difference: any[] = []) => {
         assert.deepEqual(Array.from(diff(p)(x)), difference)
     }
@@ -457,7 +457,7 @@ describe('match(pattern)(data) array comparison', () => {
 
 })
 
-describe('match(pattern)(data) function comparison', () => {
+describe('diff(pattern)(data) function comparison', () => {
     const pattern = (p) => (x, difference: any[] = []) => {
         assert.deepEqual(Array.from(diff(p)(x)), difference)
     }
@@ -471,6 +471,23 @@ describe('match(pattern)(data) function comparison', () => {
             info: '(x) => x === 2',
             type: 'discrepancy'
         }])
+    })
+    it('pattern contains primitive values', () => {
+        let fn = (x) => x === 2
+        const dif = pattern({ a: fn, b: 1 })
+        dif({ b: 1 }, [{
+            path: ['a'],
+            expected: fn,
+            info: '(x) => x === 2',
+            type: 'missing'
+        }])
+    })
+    it('pattern is IterableIterator', () => {
+        let fn = function* (data) {
+            yield 'hello'
+        }
+        const dif = pattern({ a: fn, b: 1 })
+        dif({ b: 1 }, ['hello'])
     })
     it('pattern contains primitive values', () => {
         let fn = (x) => x === 2
@@ -502,12 +519,13 @@ describe('match(pattern)(data) function comparison', () => {
 
     })
 })
-describe('match(pattern)(data) work with variable', () => {
+describe('diff(pattern)(data) work with variable', () => {
     it('should unify variable to concret value', () => {
         const pattern = (p) => (x, difference: any[] = []) => {
             assert.deepEqual(Array.from(diff(p)(x)), difference)
         }
         let fn = variable()
+        assert.equal(fn(), undefined)
         const dif = pattern([
             [1, 2],
             {
@@ -517,32 +535,31 @@ describe('match(pattern)(data) work with variable', () => {
         dif([[1, 2], { a: 1, b: [1, 2, 3] }, {}])
         assert.deepEqual(fn['empty'], false)
         assert.deepEqual(fn['value'], [1, 2, 3])
-
     })
 })
 
-// describe('Adapter Testing match.js', function () {
-//     it('should work on composed predicate', function () {
-//         assert.ok(match(1, match.not({})));
-//         assert.ok(match(1, match.or({}, 1)));
-//         assert.ok(match(2.0, match.not({})));
-//         assert.ok(match(undefined, match.optional({})));
-//         assert.ok(match({}, match.optional({})));
-//         assert.ok(match('a', match.and(match.string, 'a')));
-//     });
-//     it('should work on optional predicates', function () {
-//         assert.ok(match([], []));
-//         assert.ok(match([], match.is_array));
-//         assert.ok(!match(undefined, match.is_array));
-//         assert.ok(!match(undefined, []));
-//         assert.ok(match(undefined, match.optional(match.is_array)));
-//         assert.ok(match(undefined, match.optional([])));
-//     });
+describe('diff(pattern)(data) work with optional', function () {
 
-//     it('should work on any and none predicates', function () {
-//         assert.ok(match([], match.any([], {}, 1, 2)));
-//         assert.ok(!match([], match.none([], {})));
-//         assert.ok(match([], match.all(x => typeof x == 'object', match.is_array)));
-//     });
-// });
+    let dif = (d) => Array.from(diff({ a: optional(2), b: 1 })(d))
+    it('should work on normal field', function () {
+        assert.deepEqual(dif({ a: 2, b: 1 }), [])
+    })
+    it('should work on non-existing field', function () {
+        assert.deepEqual(dif({ b: 1 }), [])
+    })
+    it('should work on undefined field', function () {
+        assert.deepEqual(dif({ a: undefined, b: 1 }), [{
+            path: ['a'],
+            type: 'discrepancy',
+            expected: 2,
+            actual: undefined
+        }])
+    });
+
+    it(`should be idempatent`, () => {
+        let dif1 = diff(2)
+        let dif2 = diff(dif1)
+        assert.equal(dif1, dif2)
+    })
+});
 

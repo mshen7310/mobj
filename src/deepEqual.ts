@@ -27,7 +27,8 @@ export function deepEqual(x, y): boolean {
         return is_equal
     }
     const p = path()(search((obj, ctx) => {
-        const peer = ctx.accessor()(y)[0]
+        const peerArray = ctx.accessor()(y)
+        const peer = peerArray[0]
         const equal_primitive = shallowEqual(obj, peer)
         if (false === equal_primitive) {
             ctx.cancel()

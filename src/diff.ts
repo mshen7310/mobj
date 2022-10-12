@@ -50,7 +50,7 @@ export function isDifference(x: any): x is Difference {
 }
 export type DiffFn<T = any> = (...data: T[]) => IterableIterator<Difference>
 
-export function diff<T = any>(pattern): DiffFn<T> {
+export function diff(pattern): DiffFn {
     const DiffFnSymbol = Symbol.for('DiffFnSymbol')
     if (typeof pattern === 'function' && pattern[DiffFnSymbol]) {
         return pattern
