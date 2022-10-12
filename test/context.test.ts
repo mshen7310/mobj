@@ -1,6 +1,6 @@
 import 'mocha'
 import { strict as assert } from 'node:assert';
-import { variable } from '../src/match';
+import { variable } from '../src/diff';
 
 describe(`Variable should match anything`, () => {
     let date = new Date()
@@ -229,82 +229,82 @@ describe(`Variable should return the matched value from 'value' property`, () =>
     it(`1`, () => {
         assert.equal(var_number(1), true)
         assert.equal(get_value(var_number), 1)
-        assert.equal(get_value(var_number), var_number())
+        assert.equal(get_value(var_number), var_number.value)
     })
     it(`Infinity`, () => {
         assert.equal(var_Infinity(Infinity), true)
         assert.equal(get_value(var_Infinity), Infinity)
-        assert.equal(get_value(var_Infinity), var_Infinity())
+        assert.equal(get_value(var_Infinity), var_Infinity.value)
     })
     it(`NaN`, () => {
         assert.equal(var_NaN(NaN), true)
         assert.equal(get_value(var_NaN), NaN)
-        assert.equal(get_value(var_NaN), var_NaN())
+        assert.equal(get_value(var_NaN), var_NaN.value)
     })
     it(`true`, () => {
         assert.equal(var_true(true), true)
         assert.equal(get_value(var_true), true)
-        assert.equal(get_value(var_true), var_true())
+        assert.equal(get_value(var_true), var_true.value)
 
     })
     it(`false`, () => {
         assert.equal(var_false(false), true)
         assert.equal(get_value(var_false), false)
-        assert.equal(get_value(var_false), var_false())
+        assert.equal(get_value(var_false), var_false.value)
 
     })
     it(`{}`, () => {
         assert.equal(var_object({}), true)
         assert.deepEqual(get_value(var_object), {})
-        assert.equal(get_value(var_object), var_object())
+        assert.equal(get_value(var_object), var_object.value)
 
     })
     it(`[]`, () => {
         assert.equal(var_array([]), true)
         assert.deepEqual(get_value(var_array), [])
-        assert.equal(get_value(var_array), var_array())
+        assert.equal(get_value(var_array), var_array.value)
 
     })
     it(`string`, () => {
         assert.equal(var_string('string'), true)
         assert.equal(get_value(var_string), 'string')
-        assert.equal(get_value(var_string), var_string())
+        assert.equal(get_value(var_string), var_string.value)
 
     })
     it(`bigint`, () => {
         assert.equal(var_bigint(BigInt(1)), true)
         assert.equal(get_value(var_bigint), BigInt(1))
-        assert.equal(get_value(var_bigint), var_bigint())
+        assert.equal(get_value(var_bigint), var_bigint.value)
 
     })
     it(`regexp`, () => {
         assert.equal(var_regexp(/hello/i), true)
         assert.deepEqual(get_value(var_regexp), /hello/i)
-        assert.equal(get_value(var_regexp), var_regexp())
+        assert.equal(get_value(var_regexp), var_regexp.value)
 
     })
     it(`date`, () => {
         assert.equal(var_date(date), true)
         assert.equal(get_value(var_date), date)
-        assert.equal(get_value(var_date), var_date())
+        assert.equal(get_value(var_date), var_date.value)
 
     })
     it(`null`, () => {
         assert.equal(var_null(null), true)
         assert.equal(get_value(var_null), null)
-        assert.equal(get_value(var_null), var_null())
+        assert.equal(get_value(var_null), var_null.value)
 
     })
     it(`symbol`, () => {
         assert.equal(var_symbol(Symbol.for('var_symbol')), true)
         assert.equal(get_value(var_symbol), Symbol.for('var_symbol'))
-        assert.equal(get_value(var_symbol), var_symbol())
+        assert.equal(get_value(var_symbol), var_symbol.value)
 
     })
     it(`undefined`, () => {
         assert.equal(var_undefined(undefined), true)
         assert.equal(get_value(var_undefined), undefined)
-        assert.equal(get_value(var_undefined), var_undefined())
+        assert.equal(get_value(var_undefined), var_undefined.value)
 
     })
 })

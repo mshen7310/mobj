@@ -1,5 +1,5 @@
 import { path, search, setKey } from '../src/search'
-import { variable } from '../src/match';
+import { variable } from '../src/diff';
 
 import 'mocha'
 import { strict as assert } from 'node:assert';
