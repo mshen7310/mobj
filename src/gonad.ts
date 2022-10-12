@@ -3,7 +3,7 @@
 export type GeneratorFn<T = any> = (...arg: any[]) => Generator<T>
 export type PredicateFn<T = any> = (arg: T) => boolean
 export type TransformFn<T = any, R = any> = (arg: T) => R
-export type TranspredFn<T = any, R = any> = (arg: T) => [R]
+export type TranspredFn<T = any, R = any> = (arg: T) => readonly [R] | undefined
 
 export function isGenerator(fn: any): fn is Generator {
     return fn !== undefined
