@@ -14,14 +14,12 @@ class Context {
         this.path = [];
         this.node = [];
     }
-    skip(a) {
-        if (typeof a === 'object' && a !== null) {
-            this.skip_node.add(a);
-        }
-    }
-    cancel() {
-        for (let n of this.node) {
-            this.skip(n);
+    skip(...a) {
+        let array = a.length === 0 ? this.node : a;
+        for (let n of array) {
+            if (typeof n === 'object' && n !== null) {
+                this.skip_node.add(n);
+            }
         }
     }
     skipped(a) {
@@ -146,12 +144,12 @@ function search(fn, depth = Infinity) {
             }
         }
     }
-    let skip = new WeakSet();
+    let visited = new WeakSet();
     return function* walk(obj, ctx, dpth = depth) {
-        if (!skip.has(obj)) {
+        if (!visited.has(obj)) {
             yield* asGenerator(fn(obj, ctx));
             if (typeof obj === 'object' && obj !== null) {
-                skip.add(obj);
+                visited.add(obj);
             }
             if (dpth > 0 && !ctx.skipped(obj)) {
                 for (let [key, child] of children(obj)) {

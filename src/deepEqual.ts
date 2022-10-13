@@ -31,7 +31,7 @@ export function deepEqual(x, y): boolean {
         const peer = peerArray[0]
         const equal_primitive = shallowEqual(obj, peer)
         if (false === equal_primitive) {
-            ctx.cancel()
+            ctx.skip()
             return false
         } else if (undefined === equal_primitive) {
             if (
@@ -40,7 +40,7 @@ export function deepEqual(x, y): boolean {
                 || (obj instanceof Set && peer instanceof Set && obj.size !== peer.size)
                 || (Reflect.ownKeys(obj).length !== Reflect.ownKeys(peer).length)
             ) {
-                ctx.cancel()
+                ctx.skip()
                 return false
             } else if (obj instanceof Set && peer instanceof Set) {
                 for (let xi of obj) {
@@ -50,7 +50,7 @@ export function deepEqual(x, y): boolean {
                                 continue
                             }
                         }
-                        ctx.cancel()
+                        ctx.skip()
                         return false
                     }
                 }

@@ -8,14 +8,12 @@ export class Context {
     private readonly skip_node = new WeakSet()
     private readonly path: Path[] = []
     private readonly node: any[] = []
-    skip(a: any) {
-        if (typeof a === 'object' && a !== null) {
-            this.skip_node.add(a)
-        }
-    }
-    cancel() {
-        for (let n of this.node) {
-            this.skip(n)
+    skip(...a: any[]) {
+        let array = a.length === 0 ? this.node : a
+        for (let n of array) {
+            if (typeof n === 'object' && n !== null) {
+                this.skip_node.add(n)
+            }
         }
     }
     skipped(a: any): boolean {
@@ -140,12 +138,12 @@ export function search(fn: WalkerFn, depth: number = Infinity): Walker {
             }
         }
     }
-    let skip = new WeakSet()
+    let visited = new WeakSet()
     return function* walk(obj: any, ctx: Context, dpth: number = depth): Generator<Property> {
-        if (!skip.has(obj)) {
+        if (!visited.has(obj)) {
             yield* asGenerator(fn(obj, ctx))
             if (typeof obj === 'object' && obj !== null) {
-                skip.add(obj)
+                visited.add(obj)
             }
             if (dpth > 0 && !ctx.skipped(obj)) {
                 for (let [key, child] of children(obj)) {

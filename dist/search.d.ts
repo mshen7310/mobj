@@ -3,8 +3,7 @@ export declare class Context {
     private readonly skip_node;
     private readonly path;
     private readonly node;
-    skip(a: any): void;
-    cancel(): void;
+    skip(...a: any[]): void;
     skipped(a: any): boolean;
     push(node: any, p: Path): Path;
     pop(): Path;

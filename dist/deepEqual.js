@@ -33,10 +33,11 @@ function deepEqual(x, y) {
         return is_equal;
     }
     const p = (0, search_1.path)()((0, search_1.search)((obj, ctx) => {
-        const peer = ctx.accessor()(y)[0];
+        const peerArray = ctx.accessor()(y);
+        const peer = peerArray[0];
         const equal_primitive = shallowEqual(obj, peer);
         if (false === equal_primitive) {
-            ctx.cancel();
+            ctx.skip();
             return false;
         }
         else if (undefined === equal_primitive) {
@@ -44,7 +45,7 @@ function deepEqual(x, y) {
                 || (Array.isArray(obj) && Array.isArray(peer) && obj.length !== peer.length)
                 || (obj instanceof Set && peer instanceof Set && obj.size !== peer.size)
                 || (Reflect.ownKeys(obj).length !== Reflect.ownKeys(peer).length)) {
-                ctx.cancel();
+                ctx.skip();
                 return false;
             }
             else if (obj instanceof Set && peer instanceof Set) {
@@ -55,7 +56,7 @@ function deepEqual(x, y) {
                                 continue;
                             }
                         }
-                        ctx.cancel();
+                        ctx.skip();
                         return false;
                     }
                 }
