@@ -21,7 +21,7 @@ export function search(fn: (a: any, path: Path[], done: DoneFn) => any, depth: n
     }
 }
 
-function walker(...path: PathComponent[]): (...args: any[]) => Generator {
+function walker(set_getter, ...path: PathComponent[]): (...args: any[]) => Generator {
     function toWalkerFn(p: PathComponent): (x: any) => Generator {
         if (typeof p === 'function') {
             return function* (...objs: any[]) {
@@ -30,7 +30,7 @@ function walker(...path: PathComponent[]): (...args: any[]) => Generator {
                 }
             }
         } else {
-            let get = getter(equalSetElement, p)
+            let get = getter(set_getter, p)
             return function* (...objs: any[]) {
                 if (objs.length > 0) {
                     // get(objs[0]) return [any?]
@@ -47,7 +47,7 @@ function walker(...path: PathComponent[]): (...args: any[]) => Generator {
                 yield args[0]
             } else {
                 let fn = toWalkerFn(current)
-                let restfn = walker(...rest)
+                let restfn = walker(set_getter, ...rest)
                 for (let ret of fn(args[0])) {
                     yield* restfn(ret)
                 }
@@ -56,7 +56,8 @@ function walker(...path: PathComponent[]): (...args: any[]) => Generator {
     }
 }
 
-export function path(...all_path: PathComponent[]): any {
+export function path(set_getter = equalSetElement): any {
+    let all_path: PathComponent[] = []
     let retFn = new Proxy(() => { }, {
         apply(target, thisArg, argumentsList) {
             function isData(x: any) {
@@ -73,7 +74,7 @@ export function path(...all_path: PathComponent[]): any {
             if (is_path.length > 0 && not_path.length === 0) {
                 return retFn
             }
-            let w = walker(...all_path)
+            let w = walker(set_getter, ...all_path)
             if (is_path.length === 0 && not_path.length === 0) {
                 return function (...obj: any[]) {
                     return Array.from(w(...obj))

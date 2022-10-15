@@ -28,6 +28,6 @@ export declare type Difference = Missing | Discrepancy;
 export declare function isDifference(x: any): x is Difference;
 export declare type DiffFn<T = any> = (...data: T[]) => Generator<Difference>;
 export declare function diffSetElement(e: any, set: Set<any>): readonly [any?];
-export declare function discriminator(pattern: any): DiffFn;
+export declare function discriminator(pattern: any, set_getter?: typeof diffSetElement): DiffFn;
 export declare function optional(pattern: any): DiffFn<Difference>;
 export {};

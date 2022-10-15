@@ -60,7 +60,7 @@ function diffSetElement(e, set) {
     return [];
 }
 exports.diffSetElement = diffSetElement;
-function discriminator(pattern) {
+function discriminator(pattern, set_getter = diffSetElement) {
     const DiffFnSymbol = Symbol.for('DiffFnSymbol');
     if (typeof pattern === 'function' && pattern[DiffFnSymbol]) {
         return pattern;
@@ -91,7 +91,7 @@ function discriminator(pattern) {
     let walk = (0, children_1.children)();
     function* difffn(...data) {
         for (let [done, path, value] of walk(pattern)) {
-            const peerArray = (0, children_1.getter)(diffSetElement, ...path)(data[0]);
+            const peerArray = (0, children_1.getter)(set_getter, ...path)(data[0]);
             if (typeof value === 'function') {
                 let tmp = value(...peerArray);
                 if ((0, children_1.fromGeneratorFn)(tmp)) {

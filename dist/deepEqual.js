@@ -11,14 +11,14 @@ function equalSetElement(e, set) {
     return [];
 }
 exports.equalSetElement = equalSetElement;
-function deepEqual(lhs, rhs) {
+function deepEqual(lhs, rhs, set_getter = equalSetElement) {
     // const dbg = (v, p, ...r) => {
     //     const str = (x) => (x === null || x === undefined) ? `${x}` : x.toString()
     //     console.log(`${str(v)} : ${typeof v} ~~ ${str(p)} : ${typeof p} =>`, ...r)
     // }
     let walk = (0, children_1.children)();
     for (let [done, path, value] of walk(lhs)) {
-        let peerArray = (0, children_1.getter)(equalSetElement, ...path)(rhs);
+        let peerArray = (0, children_1.getter)(set_getter, ...path)(rhs);
         if (peerArray.length === 0) {
             return false;
         }

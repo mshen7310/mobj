@@ -11,7 +11,7 @@
     "build": "rm -rf dist; tsc",
     "test": "rm *.cpuprofile; nyc mocha -r ts-node/register --timeout 10000 test/**/*.ts",
     "doc": "rm -rf docs; npx ts-docs",
-    "all": "npm run build; npm run doc; npm run test"
+    "all": "npm run build && npm run test && npm run doc"
   },
   "repository": {
     "type": "git",

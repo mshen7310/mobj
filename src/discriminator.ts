@@ -80,7 +80,7 @@ export function diffSetElement(e: any, set: Set<any>): readonly [any?] {
     }
     return []
 }
-export function discriminator(pattern: any): DiffFn {
+export function discriminator(pattern: any, set_getter = diffSetElement): DiffFn {
     const DiffFnSymbol = Symbol.for('DiffFnSymbol')
     if (typeof pattern === 'function' && pattern[DiffFnSymbol]) {
         return pattern
@@ -111,7 +111,7 @@ export function discriminator(pattern: any): DiffFn {
     let walk = children()
     function* difffn(...data: any[]) {
         for (let [done, path, value] of walk(pattern)) {
-            const peerArray = getter(diffSetElement, ...path)(data[0])
+            const peerArray = getter(set_getter, ...path)(data[0])
             if (typeof value === 'function') {
                 let tmp = value(...peerArray)
                 if (fromGeneratorFn(tmp)) {

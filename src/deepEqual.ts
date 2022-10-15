@@ -9,14 +9,14 @@ export function equalSetElement(e: any, set: Set<any>): readonly [any?] {
     return []
 }
 
-export function deepEqual(lhs: any, rhs: any): boolean {
+export function deepEqual(lhs: any, rhs: any, set_getter = equalSetElement): boolean {
     // const dbg = (v, p, ...r) => {
     //     const str = (x) => (x === null || x === undefined) ? `${x}` : x.toString()
     //     console.log(`${str(v)} : ${typeof v} ~~ ${str(p)} : ${typeof p} =>`, ...r)
     // }
     let walk = children()
     for (let [done, path, value] of walk(lhs)) {
-        let peerArray = getter(equalSetElement, ...path)(rhs)
+        let peerArray = getter(set_getter, ...path)(rhs)
         if (peerArray.length === 0) {
             return false
         }
