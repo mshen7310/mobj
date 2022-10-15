@@ -171,7 +171,7 @@ export function iterators(...args: (GenChild | readonly [any, GenChild])[]) {
     return function* (...objs: any[]) {
         if (objs.length > 0) {
             let obj = objs[0]
-            if (typeof obj === 'object' && obj !== null && obj !== undefined) {
+            if (typeof obj === 'object' && obj !== null) {
                 let gen = ret.get(obj.constructor)
                 if (gen !== undefined) {
                     yield* gen(...objs)

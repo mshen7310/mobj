@@ -1,5 +1,5 @@
 import { deepEqual } from "./deepEqual";
-import { children, fromGeneratorFn, getter, Path } from "./children";
+import { children, fromGeneratorFn, getter, mapKey, Path, setKey } from "./children";
 
 export type Predicate<T = any> = (...data: T[]) => boolean
 export interface Variable<T = any> {
@@ -174,3 +174,4 @@ export function optional(pattern): DiffFn<Difference> {
         }
     }
 }
+
