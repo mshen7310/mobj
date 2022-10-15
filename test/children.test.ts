@@ -1,4 +1,4 @@
-import { children, iterators, setKey, mapKey, isPath } from '../src/children'
+import { children, iterators, setKey, mapKey, isPath, getter } from '../src/children'
 import 'mocha'
 import { strict as assert } from 'node:assert';
 
@@ -221,3 +221,13 @@ describe(`isPath`, () => {
     })
 })
 
+describe(`getter`, () => {
+    it(`should work with undefined set_getter`, () => {
+        let g = getter(null, 'a', 'b', 1)
+        assert.deepEqual(g({
+            a: {
+                b: [1, 2, 3]
+            }
+        }), [2])
+    })
+})

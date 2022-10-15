@@ -105,7 +105,7 @@ type GetResult<T extends object, P extends Path> = T | ValueOf<T, P>
 export type SetGetter<T = any, R = any> = (e: T, set: Set<T>) => readonly [R?]
 
 
-export function getter<P extends Path, T extends object>(set_getter: SetGetter, ...path: P[]): (obj: T) => readonly [GetResult<T, P>?] {
+export function getter<PP extends Path[], T extends object>(set_getter: SetGetter | null, ...path: PP): (obj: T) => readonly [GetResult<T, PP[0]>?] {
     function get<P extends Path, T extends object>(path: P, obj: T): readonly [ValueOf<T, P>?] {
         if (obj instanceof Map && isMapKey(path) && obj.has(path[0])) {
             return [obj.get(path[0])]
@@ -113,7 +113,7 @@ export function getter<P extends Path, T extends object>(set_getter: SetGetter, 
             if (obj.has(path[0])) {
                 return [path[0]]
             } else if (typeof path[0] === 'object' && path[0] !== null) {
-                return set_getter ? set_getter(path[0], obj) : []
+                return typeof set_getter === 'function' ? set_getter(path[0], obj) : []
             } else {
                 return []
             }
@@ -133,7 +133,7 @@ export function getter<P extends Path, T extends object>(set_getter: SetGetter, 
                 return []
             } else {
                 let rest_get = getter(set_getter, ...rest)
-                return rest_get(tmp[0]) as readonly [GetResult<T, P>?]
+                return rest_get(tmp[0] as any) as readonly [GetResult<T, PP[0]>?]
             }
         }
     }

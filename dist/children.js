@@ -87,7 +87,7 @@ function getter(set_getter, ...path) {
                 return [path[0]];
             }
             else if (typeof path[0] === 'object' && path[0] !== null) {
-                return set_getter ? set_getter(path[0], obj) : [];
+                return typeof set_getter === 'function' ? set_getter(path[0], obj) : [];
             }
             else {
                 return [];

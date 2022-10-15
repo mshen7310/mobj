@@ -24,7 +24,7 @@ declare type ValueOf<T extends object, Key extends Path> = T extends Map<infer _
 declare type GenChild<T = any> = GenFn<T[], readonly [KeyOf<T>, any, boolean?]>;
 declare type GetResult<T extends object, P extends Path> = T | ValueOf<T, P>;
 export declare type SetGetter<T = any, R = any> = (e: T, set: Set<T>) => readonly [R?];
-export declare function getter<P extends Path, T extends object>(set_getter: SetGetter, ...path: P[]): (obj: T) => readonly [GetResult<T, P>?];
+export declare function getter<PP extends Path[], T extends object>(set_getter: SetGetter | null, ...path: PP): (obj: T) => readonly [GetResult<T, PP[0]>?];
 export declare function iterators(...args: (GenChild | readonly [any, GenChild])[]): (...objs: any[]) => Generator<any, void, any>;
 export declare type ElementGenerator<T extends any[], V = any> = (...objects: T) => Generator<Element<Path, V>>;
 export declare function children(depth?: number, ite?: (...objs: any[]) => Generator<any, void, any>): ElementGenerator<any>;

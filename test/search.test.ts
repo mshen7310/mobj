@@ -204,6 +204,13 @@ describe('path', () => {
         assert.deepEqual(tmp, [1])
     })
     it(`should search for Map`, () => {
+        let tmp = path()(search((obj, path, done) => {
+            done()
+        }))(mapKey('a'))(data)
+        assert.deepEqual(tmp, [])
+    })
+
+    it(`should search for Map`, () => {
         let tmp = path()(data)
         assert.deepEqual(tmp, [data])
     })
