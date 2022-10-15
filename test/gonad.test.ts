@@ -84,7 +84,7 @@ describe('children', function () {
         assert.deepEqual(Array.from(c(undefined))[0].slice(1), [[], undefined])
     })
     it(`nothing`, () => {
-        assert.deepEqual(Array.from(c())[0].slice(1), [[]])
+        assert.deepEqual(Array.from(c()), [])
     })
     it(`null`, () => {
         assert.deepEqual(Array.from(c(null))[0].slice(1), [[], null])
@@ -119,6 +119,16 @@ describe('children', function () {
     it(`{a:1, b:'hello'}`, () => {
         assert.deepEqual(Array.from(c({ a: 1, b: 'hello' })).map(x => x.slice(1)), [
             [[], { a: 1, b: 'hello' }],
+            [['a'], 1],
+            [['b'], 'hello'],
+        ])
+    })
+    it(`{a:1, b:'hello'} without constructor`, () => {
+        let tmp = Object.create(null)
+        tmp.a = 1
+        tmp.b = 'hello'
+        assert.deepEqual(Array.from(c(tmp)).map(x => x.slice(1)), [
+            [[], tmp],
             [['a'], 1],
             [['b'], 'hello'],
         ])

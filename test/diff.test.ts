@@ -1,7 +1,8 @@
 import 'mocha'
 import { strict as assert } from 'node:assert';
-import { diff, optional, variable } from '../src/diff'
-import { setKey } from '../src/search';
+import { setKey, mapKey } from '../src/gonad'
+import { diff, optional, variable, DifferenceType } from '../src/diff'
+
 describe('diff(pattern)(data) shallow comparison', () => {
     const primitivePattern = (p) => (x, result?: boolean) => {
         if (result === true) {
@@ -9,7 +10,7 @@ describe('diff(pattern)(data) shallow comparison', () => {
         } else if (result === false) {
             assert.deepEqual(Array.from(diff(p)(x)), [{
                 path: [],
-                type: 'discrepancy',
+                type: DifferenceType.Discrepancy,
                 expected: p,
                 actual: x
             }])
@@ -17,7 +18,7 @@ describe('diff(pattern)(data) shallow comparison', () => {
         } else {
             assert.deepEqual(Array.from(diff(p)(x)), p === x ? [] : [{
                 path: [],
-                type: 'discrepancy',
+                type: DifferenceType.Discrepancy,
                 expected: p,
                 actual: x
             }])
@@ -276,13 +277,13 @@ describe('diff(pattern)(data) Set comparison', () => {
         dif(new Set([1, 2]))
         dif(new Set([{ a: 1 }, 1]))
         dif(new Set([2]), [{
-            path: [setKey(0)],
-            type: 'missing',
+            path: [setKey(1)],
+            type: DifferenceType.Absence,
             expected: 1
         }])
         dif(new Set([{ a: 1 }]), [{
-            path: [setKey(0)],
-            type: 'missing',
+            path: [setKey(1)],
+            type: DifferenceType.Absence,
             expected: 1
         }])
     })
@@ -291,13 +292,13 @@ describe('diff(pattern)(data) Set comparison', () => {
         dif(new Set([{ a: 1 }]))
         dif(new Set([{ a: 1 }, 1]))
         dif(new Set([2]), [{
-            path: [setKey(0)],
-            type: 'missing',
+            path: [setKey({ a: 1 })],
+            type: DifferenceType.Absence,
             expected: { a: 1 }
         }])
         dif(new Set([3]), [{
-            path: [setKey(0)],
-            type: 'missing',
+            path: [setKey({ a: 1 })],
+            type: DifferenceType.Absence,
             expected: { a: 1 }
         }])
     })
@@ -314,13 +315,13 @@ describe('diff(pattern)(data) Map comparison', () => {
         dif(new Map([['a', 1], ['b', 1]]))
         dif(new Map([['b', 1], ['a', 1]]))
         dif(new Map([]), [{
-            path: ['a'],
-            type: 'missing',
+            path: [mapKey('a')],
+            type: DifferenceType.Absence,
             expected: 1
         }])
         dif(new Map([['a', 2]]), [{
-            path: ['a'],
-            type: 'discrepancy',
+            path: [mapKey('a')],
+            type: DifferenceType.Discrepancy,
             expected: 1,
             actual: 2
         }])
@@ -331,14 +332,14 @@ describe('diff(pattern)(data) Map comparison', () => {
         dif(new Map(Object.entries({ a: [1, 2, 3] })))
         dif(new Map(Object.entries({ a: [1, 2, 3], b: 3 })))
         dif(new Map([['a', 2]]), [{
-            path: ['a'],
-            type: 'discrepancy',
+            path: [mapKey('a')],
+            type: DifferenceType.Discrepancy,
             expected: [1, 2, 3],
             actual: 2
         }])
         dif(new Map([]), [{
-            path: ['a'],
-            type: 'missing',
+            path: [mapKey('a')],
+            type: DifferenceType.Absence,
             expected: [1, 2, 3]
         }])
     })
@@ -357,17 +358,17 @@ describe('diff(pattern)(data) object comparison', () => {
         dif({ c: 'string', a: 1, b: true })
         dif({ a: 1 }, [{
             path: ['b'],
-            type: 'missing',
+            type: DifferenceType.Absence,
             expected: true
         }])
         dif({ a: 2 }, [{
             path: ['a'],
-            type: 'discrepancy',
+            type: DifferenceType.Discrepancy,
             expected: 1,
             actual: 2
         }, {
             path: ['b'],
-            type: 'missing',
+            type: DifferenceType.Absence,
             expected: true
         }])
 
@@ -378,13 +379,13 @@ describe('diff(pattern)(data) object comparison', () => {
         dif({ a: [1, 2, 3], b: 3 })
         dif({ a: 2 }, [{
             path: ['a'],
-            type: 'discrepancy',
+            type: DifferenceType.Discrepancy,
             expected: [1, 2, 3],
             actual: 2
         }])
         dif({}, [{
             path: ['a'],
-            type: 'missing',
+            type: DifferenceType.Absence,
             expected: [1, 2, 3]
         }])
     })
@@ -402,18 +403,18 @@ describe('diff(pattern)(data) array comparison', () => {
         dif([1, 2, 3, {}])
         dif([1, 3, 'A'], [{
             path: [1],
-            type: 'discrepancy',
+            type: DifferenceType.Discrepancy,
             expected: 2,
             actual: 3
         }, {
             path: [2],
-            type: 'discrepancy',
+            type: DifferenceType.Discrepancy,
             expected: 3,
             actual: 'A'
         }])
         dif([{}, 2, 3, 5], [{
             path: [0],
-            type: 'discrepancy',
+            type: DifferenceType.Discrepancy,
             expected: 1,
             actual: {}
         }])
@@ -425,31 +426,31 @@ describe('diff(pattern)(data) array comparison', () => {
         dif([[1, 2], { a: 1, b: 2 }, {}, 'p'])
         dif([1], [{
             path: [0],
-            type: 'discrepancy',
+            type: DifferenceType.Discrepancy,
             expected: [1, 2],
             actual: 1
         }, {
             path: [1],
-            type: 'missing',
+            type: DifferenceType.Absence,
             expected: { a: 1, b: 2 }
         }, {
             path: [2],
-            type: 'missing',
+            type: DifferenceType.Absence,
             expected: {}
         }])
         dif([{}, 2, 3, 5], [{
             path: [0],
-            type: 'discrepancy',
+            type: DifferenceType.Discrepancy,
             expected: [1, 2],
             actual: {}
         }, {
             path: [1],
-            type: 'discrepancy',
+            type: DifferenceType.Discrepancy,
             expected: { a: 1, b: 2 },
             actual: 2
         }, {
             path: [2],
-            type: 'discrepancy',
+            type: DifferenceType.Discrepancy,
             expected: {},
             actual: 3
         }])
@@ -469,7 +470,7 @@ describe('diff(pattern)(data) function comparison', () => {
             expected: fn,
             actual: {},
             info: '(x) => x === 2',
-            type: 'discrepancy'
+            type: DifferenceType.Discrepancy
         }])
     })
     it('pattern contains primitive values', () => {
@@ -479,7 +480,7 @@ describe('diff(pattern)(data) function comparison', () => {
             path: ['a'],
             expected: fn,
             info: '(x) => x === 2',
-            type: 'missing'
+            type: DifferenceType.Absence
         }])
     })
     it('pattern is IterableIterator', () => {
@@ -506,12 +507,12 @@ describe('diff(pattern)(data) function comparison', () => {
         dif([[1, 2], { a: 1, b: [1, 2, 4] }, {}, 'p'])
         dif(['p', { a: 1, b: [1, 3, 4] }, {}, 'p'], [{
             path: [0],
-            type: 'discrepancy',
+            type: DifferenceType.Discrepancy,
             expected: [1, 2],
             actual: 'p'
         }, {
             path: [1, 'b', 1],
-            type: 'discrepancy',
+            type: DifferenceType.Discrepancy,
             expected: fn,
             actual: 3,
             info: '(x) => x === 2'
@@ -550,7 +551,7 @@ describe('diff(pattern)(data) work with optional', function () {
     it('should work on undefined field', function () {
         assert.deepEqual(dif({ a: undefined, b: 1 }), [{
             path: ['a'],
-            type: 'discrepancy',
+            type: DifferenceType.Discrepancy,
             expected: 2,
             actual: undefined
         }])

@@ -1,68 +1,7 @@
 
-// export type GeneratorFn<T = any> = (...arg: any[]) => Generator<T>
-// export type PredicateFn<T = any> = (arg: T) => boolean
-// export type TransformFn<T = any, R = any> = (arg: T) => R
-// export type TranspredFn<T = any, R = any> = (arg: T) => readonly [R] | undefined
-
-// export function isGenerator(fn: any): fn is Generator {
-//     return fn !== undefined
-//         && fn !== null
-//         && typeof fn === 'object'
-//         && typeof fn[Symbol.iterator] === 'function'
+// function curry(f: Function, arity = f.length, ...args) {
+//     return arity <= args.length ? f(...args) : (...argz) => curry(f, arity, ...args, ...argz)
 // }
-
-
-// export function filter<T = any>(p: PredicateFn<T>): GeneratorFn<T> {
-//     return function* (gen: Generator<T>) {
-//         for (let x of gen) {
-//             if (p(x)) {
-//                 yield x
-//             }
-//         }
-//     }
-// }
-
-// export function map<T = any, R = any>(t: TransformFn<T, R>): GeneratorFn<R> {
-//     return function* (gen: Generator<T>) {
-//         for (let x of gen) {
-//             yield t(x)
-//         }
-//     }
-// }
-
-// export function mapFilter<T = any, R = any>(fn: TranspredFn<T, R>): GeneratorFn<R> {
-//     return function* (gen: Generator<T>) {
-//         for (let x of gen) {
-//             let array = fn(x)
-//             if (Array.isArray(array) && array.length === 1) {
-//                 yield array[0]
-//             }
-//         }
-//     }
-// }
-
-// function bind<A = any, B = any>(fn1: GeneratorFn<A>, fn2: GeneratorFn<B>): GeneratorFn<B> {
-//     return function* (gen: Generator) {
-//         yield* fn2(fn1(gen))
-//     }
-// }
-// export function chain(...fn: GeneratorFn[]): GeneratorFn {
-//     let [f, ...rest] = fn
-//     if (typeof f === 'function') {
-//         if (rest.length > 0) {
-//             return bind(f, chain(...rest))
-//         } else {
-//             return f
-//         }
-//     } else if (rest.length > 0) {
-//         return chain(...rest)
-//     } else {
-//         return function* (gen: Generator) {
-//             yield* gen
-//         }
-//     }
-// }
-
 class Context {
     private readonly skip_node = new WeakSet()
     private readonly node: any[] = []
@@ -85,45 +24,29 @@ class Context {
     }
 }
 
-export type Element = readonly [
+export type Element<P extends Path, V = any> = readonly [
     done: (...obj: any[]) => void,
-    path: Path[],
-    value?: any,
+    path: P[],
+    value?: V,
 ]
-export type SetKey = readonly [any, 'SetKey']
-export type MapKey = readonly [any, 'MapKey']
-export type Path = symbol | number | string | SetKey | MapKey
-export function isMapKey(p: any): p is MapKey {
+export type SetKey<T> = readonly [T, 'SetKey']
+export type MapKey<T> = readonly [T, 'MapKey']
+export type Path = symbol | number | string | SetKey<any> | MapKey<any>
+export function isMapKey(p: any): p is MapKey<any> {
     return Array.isArray(p)
         && p.length === 2
         && p[1] === 'MapKey'
 }
-export function mapKey(k: any): MapKey {
+export function mapKey<T>(k: T): MapKey<T> {
     return [k, 'MapKey']
 }
-export function isSetKey(p: any): p is SetKey {
+export function isSetKey(p: any): p is SetKey<any> {
     return Array.isArray(p)
         && p.length === 2
         && p[1] === 'SetKey'
 }
-export function setKey(v: any): SetKey {
+export function setKey<T>(v: T): SetKey<T> {
     return [v, 'SetKey']
-}
-
-export function isPath(p: any): p is Path {
-    switch (typeof p) {
-        case 'symbol':
-        case 'string':
-        case 'number': {
-            return true
-        }
-        case 'object': {
-            return isSetKey(p) || isMapKey(p)
-        }
-        default: {
-            return false
-        }
-    }
 }
 
 
@@ -135,9 +58,52 @@ type KeyOf<T> = T extends Map<infer K, infer _> ? [K, 'MapKey']
     : T extends Object ? string | symbol
     : never
 
+type ValueOfMap<Key, V> = Key extends MapKey<Key> ? V : never
+type ValueOfSet<Key, V> = Key extends SetKey<V> ? V : never
+type ValueOfArray<Key, V> = Key extends number ? V : never
+type ValueOfObject<Key, T> = Key extends keyof T ? T[Key] : never
+type ValueOf<T extends object, Key extends Path> = T extends Map<infer _, infer V> ? ValueOfMap<Key, V>
+    : T extends Set<infer V> ? ValueOfSet<Key, V>
+    : T extends Array<infer V> ? ValueOfArray<Key, V>
+    : ValueOfObject<Key, T>
+
+
 type GenChild<T = any> = GenFn<T[], readonly [KeyOf<T>, any, boolean?]>
-
-
+type GetResult<T extends object, P extends Path> = T | ValueOf<T, P>
+export type SetGetter<T = any, R = any> = (e: T, set: Set<T>) => readonly [R?]
+export function getter<P extends Path, T extends object>(set_getter: SetGetter, ...path: P[]): (obj: T) => readonly [GetResult<T, P>?] {
+    function get<P extends Path, T extends object>(path: P, obj: T): readonly [ValueOf<T, P>?] {
+        if (obj instanceof Map && isMapKey(path) && obj.has(path[0])) {
+            return [obj.get(path[0])]
+        } else if (obj instanceof Set && isSetKey(path)) {
+            if (obj.has(path[0])) {
+                return [path[0]]
+            } else if (typeof path[0] === 'object' && path[0] !== null) {
+                return set_getter(path[0], obj)
+            } else {
+                return []
+            }
+        } else if (obj !== null && obj !== undefined && !isSetKey(path) && !isMapKey(path) && Reflect.has(obj, path)) {
+            return [obj[path as Exclude<Path, SetKey<any> | MapKey<any>>]]
+        } else {
+            return []
+        }
+    }
+    return (obj: T) => {
+        if (path.length === 0) {
+            return [obj]
+        } else {
+            let [p, ...rest] = path
+            let tmp = get(p, obj)
+            if (tmp.length === 0) {
+                return []
+            } else {
+                let rest_get = getter(set_getter, ...rest)
+                return rest_get(tmp[0]) as readonly [GetResult<T, P>?]
+            }
+        }
+    }
+}
 
 export function iterators(...args: (GenChild | readonly [any, GenChild])[]) {
     let ret = new Map<any, any>([
@@ -180,36 +146,28 @@ export function iterators(...args: (GenChild | readonly [any, GenChild])[]) {
             }
             if (fallback.length > 0) {
                 yield* fallback[0](...objs)
+            } else if (obj !== null && obj !== undefined && !obj.constructor) {
+                for (let k of Reflect.ownKeys(obj)) {
+                    yield [k, obj[k], true]
+                }
             }
         }
     }
 }
-export type ElementGenerator<T extends any[]> = (...objects: T) => Generator<Element>
+export type ElementGenerator<T extends any[], V = any> = (...objects: T) => Generator<Element<Path, V>>
 
-export function element(key: Path): ElementGenerator<any> {
-    return function* (...objects: any[]): Generator<Element> {
-        const done = () => { }
-        if (objects.length > 0) {
-            let obj = objects[0]
-            if (obj instanceof Set && isSetKey(key) && obj.has(key[0])) {
-                yield [done, [key], key[0]]
-            } else if (obj instanceof Map && isMapKey(key) && obj.has(key[0])) {
-                yield [done, [key], obj.get(key[0])]
-            } else if (obj !== null && obj !== undefined && Reflect.has(obj, key as Exclude<Path, SetKey | MapKey>)) {
-                yield [done, [key], obj[key as Exclude<Path, SetKey | MapKey>]]
-            }
-        }
-    }
-}
-export function children(depth: number = Infinity, ite = iterators()): ElementGenerator<any> {
-    return function* (...objects: any[]): Generator<Element> {
+
+const default_iterator = iterators()
+export function children(depth: number = Infinity, ite = default_iterator): ElementGenerator<any> {
+    return function* (...objects: any[]): Generator<Element<Path>> {
         let visited = new WeakSet()
         let ctx = new Context()
-        function* walk(path: Path[], dpth: number, ...args: any[]): Generator<Element> {
-            const done = (...x) => ctx.skip(...x)
-            if (args.length === 0) {
-                yield [done, path]
-            } else if (!visited.has(args[0])) {
+        function* walk(path: Path[], dpth: number, ...args: any[]): Generator<Element<Path>> {
+            const done = (...x) => {
+                // console.log('done', ...x)
+                ctx.skip(...x)
+            }
+            if (args.length > 0 && !visited.has(args[0])) {
                 let obj = args[0]
                 if (typeof obj === 'object' && obj !== null) {
                     visited.add(obj)
@@ -227,9 +185,6 @@ export function children(depth: number = Infinity, ite = iterators()): ElementGe
                         } else {
                             yield [done, [...path, key], child]
                         }
-                        if (ctx.skipped(obj)) {
-                            break
-                        }
                     }
                 }
             }
@@ -237,4 +192,3 @@ export function children(depth: number = Infinity, ite = iterators()): ElementGe
         yield* walk([], depth, ...objects)
     }
 }
-

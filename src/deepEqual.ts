@@ -1,62 +1,71 @@
-import { path, search } from "./search"
+import { children, getter } from "./gonad"
 
-export function deepEqual(x, y): boolean {
-    function shallowEqual(x, y) {
-        if (x === y || (Number.isNaN(x) && Number.isNaN(y))) {
-            return true
-        } else if (typeof x !== typeof y || typeof x !== 'object') {
-            return false
-        } else if (x instanceof Date && y instanceof Date) {
-            return x.getTime() === y.getTime()
-        } else if (x instanceof RegExp && y instanceof RegExp) {
-            return x.toString() === y.toString()
-        } else if (x.constructor !== y.constructor) {
-            return false
-        }
-    }
-    function deepHas(set: Set<any>, e: object): boolean {
-        for (let element of set) {
-            if (deepEqual(e, element)) {
-                return true
-            }
-        }
-        return false
-    }
-    const is_equal = shallowEqual(x, y)
-    if (is_equal !== undefined) {
-        return is_equal
-    }
-    const p = path()(search((obj, ctx) => {
-        const peerArray = ctx.accessor()(y)
-        const peer = peerArray[0]
-        const equal_primitive = shallowEqual(obj, peer)
-        if (false === equal_primitive) {
-            ctx.skip()
-            return false
-        } else if (undefined === equal_primitive) {
-            if (
-                (obj instanceof Map && peer instanceof Map && obj.size !== peer.size)
-                || (Array.isArray(obj) && Array.isArray(peer) && obj.length !== peer.length)
-                || (obj instanceof Set && peer instanceof Set && obj.size !== peer.size)
-                || (Reflect.ownKeys(obj).length !== Reflect.ownKeys(peer).length)
-            ) {
-                ctx.skip()
-                return false
-            } else if (obj instanceof Set && peer instanceof Set) {
-                for (let xi of obj) {
-                    if (!peer.has(xi)) {
-                        if (typeof xi === 'object' && xi !== null) {
-                            if (deepHas(peer, xi)) {
-                                continue
-                            }
-                        }
-                        ctx.skip()
-                        return false
-                    }
+export function deepEqual(lhs: any, rhs: any): boolean {
+    // const dbg = (v, p, ...r) => {
+    //     const str = (x) => (x === null || x === undefined) ? `${x}` : x.toString()
+    //     console.log(`${str(v)} : ${typeof v} ~~ ${str(p)} : ${typeof p} =>`, ...r)
+    // }
+    let walk = children()
+    for (let [done, path, value] of walk(lhs)) {
+        let peer = getter((e: any, set: Set<any>) => {
+            for (let tmp of set) {
+                if (deepEqual(e, tmp)) {
+                    return [tmp]
                 }
-                ctx.skip(obj)
+            }
+            return []
+        }, ...path)(rhs)[0]
+        if (typeof value !== typeof peer) {
+            // dbg(value, peer, false, 0)
+            return false
+        }
+        if (typeof peer === 'number') {
+            if (value !== peer) {
+                if (!(isNaN(value) && isNaN(peer))) {
+                    // dbg(value, peer, false, 1)
+                    return false
+                }
+            }
+        } else if (typeof value !== 'object') {
+            if (value !== peer) {
+                // dbg(value, peer, false, 2)
+                return false
             }
         }
-    }))()
-    return p(x).length === 0
+        if (typeof value === 'object' && value !== null && value !== undefined && peer !== null && peer !== undefined) {
+            if (value instanceof Date && peer instanceof Date) {
+                if (value.getTime() !== peer.getTime()) {
+                    // dbg(value, peer, false, 3)
+                    return false
+                }
+            }
+            if (value instanceof RegExp && peer instanceof RegExp) {
+                if (value.toString() !== peer.toString()) {
+                    // dbg(value, peer, false, 4)
+                    return false
+                }
+            }
+            if (value.constructor !== peer.constructor) {
+                // dbg(value, peer, false, 5)
+                return false
+            }
+            if (value instanceof Map && peer instanceof Map && value.size !== peer.size) {
+                // dbg(value, peer, false, 6)
+                return false
+            }
+            if (Array.isArray(value) && Array.isArray(peer) && value.length !== peer.length) {
+                // dbg(value, peer, false, 7)
+                return false
+            }
+            if (value instanceof Set && peer instanceof Set && value.size !== peer.size) {
+                // dbg(value, peer, false, 8)
+                return false
+            }
+            if (Reflect.ownKeys(value).length !== Reflect.ownKeys(peer).length) {
+                // dbg(value, peer, false, 9)
+                return false
+            }
+        }
+    }
+    return true
 }
