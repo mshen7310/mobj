@@ -1,4 +1,4 @@
-import { Path } from "../search";
+import { Path } from "../children";
 
 
 export const SamplerSymbol: unique symbol = Symbol.for('alpacar.Sampler')

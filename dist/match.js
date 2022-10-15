@@ -1,9 +1,9 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.or = exports.and = exports.not = exports.match = void 0;
-const diff_1 = require("./diff");
+const discriminator_1 = require("./discriminator");
 function match(pattern) {
-    let fn = (0, diff_1.diff)(pattern);
+    let fn = (0, discriminator_1.discriminator)(pattern);
     return function (...data) {
         for (let _ of fn(...data)) {
             return false;

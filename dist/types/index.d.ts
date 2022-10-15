@@ -1,4 +1,4 @@
-import { Path } from "../search";
+import { Path } from "../children";
 export declare const SamplerSymbol: unique symbol;
 export declare const MatcherSymbol: unique symbol;
 export declare const DifferSymbol: unique symbol;

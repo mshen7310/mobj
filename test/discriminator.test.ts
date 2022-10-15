@@ -1,14 +1,14 @@
 import 'mocha'
 import { strict as assert } from 'node:assert';
-import { setKey, mapKey } from '../src/gonad'
-import { diff, optional, variable, DifferenceType } from '../src/diff'
+import { setKey, mapKey } from '../src/children'
+import { discriminator, optional, variable, DifferenceType } from '../src/discriminator'
 
 describe('diff(pattern)(data) shallow comparison', () => {
     const primitivePattern = (p) => (x, result?: boolean) => {
         if (result === true) {
-            assert.deepEqual(Array.from(diff(p)(x)), [])
+            assert.deepEqual(Array.from(discriminator(p)(x)), [])
         } else if (result === false) {
-            assert.deepEqual(Array.from(diff(p)(x)), [{
+            assert.deepEqual(Array.from(discriminator(p)(x)), [{
                 path: [],
                 type: DifferenceType.Discrepancy,
                 expected: p,
@@ -16,7 +16,7 @@ describe('diff(pattern)(data) shallow comparison', () => {
             }])
 
         } else {
-            assert.deepEqual(Array.from(diff(p)(x)), p === x ? [] : [{
+            assert.deepEqual(Array.from(discriminator(p)(x)), p === x ? [] : [{
                 path: [],
                 type: DifferenceType.Discrepancy,
                 expected: p,
@@ -269,7 +269,7 @@ describe('diff(pattern)(data) shallow comparison', () => {
 
 describe('diff(pattern)(data) Set comparison', () => {
     const pattern = (p) => (x, difference: any[] = []) => {
-        assert.deepEqual(Array.from(diff(p)(x)), difference)
+        assert.deepEqual(Array.from(discriminator(p)(x)), difference)
     }
     it('pettern contains primitive value', () => {
         const dif = pattern(new Set([1]))
@@ -307,7 +307,7 @@ describe('diff(pattern)(data) Set comparison', () => {
 
 describe('diff(pattern)(data) Map comparison', () => {
     const pattern = (p) => (x, difference: any[] = []) => {
-        assert.deepEqual(Array.from(diff(p)(x)), difference)
+        assert.deepEqual(Array.from(discriminator(p)(x)), difference)
     }
     it('pattern contains primitive values', () => {
         const dif = pattern(new Map([['a', 1]]))
@@ -349,7 +349,7 @@ describe('diff(pattern)(data) Map comparison', () => {
 
 describe('diff(pattern)(data) object comparison', () => {
     const pattern = (p) => (x, difference: any[] = []) => {
-        assert.deepEqual(Array.from(diff(p)(x)), difference)
+        assert.deepEqual(Array.from(discriminator(p)(x)), difference)
     }
     it('pattern contains primitive values', () => {
         const dif = pattern({ a: 1, b: true })
@@ -394,7 +394,7 @@ describe('diff(pattern)(data) object comparison', () => {
 
 describe('diff(pattern)(data) array comparison', () => {
     const pattern = (p) => (x, difference: any[] = []) => {
-        assert.deepEqual(Array.from(diff(p)(x)), difference)
+        assert.deepEqual(Array.from(discriminator(p)(x)), difference)
     }
     it('pattern contains primitive values', () => {
         const dif = pattern([1, 2, 3])
@@ -460,7 +460,7 @@ describe('diff(pattern)(data) array comparison', () => {
 
 describe('diff(pattern)(data) function comparison', () => {
     const pattern = (p) => (x, difference: any[] = []) => {
-        assert.deepEqual(Array.from(diff(p)(x)), difference)
+        assert.deepEqual(Array.from(discriminator(p)(x)), difference)
     }
     it('pattern contains primitive values', () => {
         let fn = (x) => x === 2
@@ -493,7 +493,7 @@ describe('diff(pattern)(data) function comparison', () => {
     it('pattern contains primitive values', () => {
         let fn = (x) => x === 2
         const dif = pattern([
-            diff([1, 2]),
+            discriminator([1, 2]),
             {
                 a: 1,
                 b: [
@@ -523,7 +523,7 @@ describe('diff(pattern)(data) function comparison', () => {
 describe('diff(pattern)(data) work with variable', () => {
     it('should unify variable to concret value', () => {
         const pattern = (p) => (x, difference: any[] = []) => {
-            assert.deepEqual(Array.from(diff(p)(x)), difference)
+            assert.deepEqual(Array.from(discriminator(p)(x)), difference)
         }
         let fn = variable()
         assert.equal(fn(), undefined)
@@ -541,7 +541,7 @@ describe('diff(pattern)(data) work with variable', () => {
 
 describe('diff(pattern)(data) work with optional', function () {
 
-    let dif = (d) => Array.from(diff({ a: optional(2), b: 1 })(d))
+    let dif = (d) => Array.from(discriminator({ a: optional(2), b: 1 })(d))
     it('should work on normal field', function () {
         assert.deepEqual(dif({ a: 2, b: 1 }), [])
     })
@@ -558,8 +558,8 @@ describe('diff(pattern)(data) work with optional', function () {
     });
 
     it(`should be idempatent`, () => {
-        let dif1 = diff(2)
-        let dif2 = diff(dif1)
+        let dif1 = discriminator(2)
+        let dif2 = discriminator(dif1)
         assert.equal(dif1, dif2)
     })
 });

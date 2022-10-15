@@ -1,4 +1,13 @@
-import { children, getter } from "./gonad"
+import { children, getter } from "./children"
+
+export function equalSetElement(e: any, set: Set<any>): readonly [any?] {
+    for (let from_set of set) {
+        if (deepEqual(e, from_set)) {
+            return [from_set]
+        }
+    }
+    return []
+}
 
 export function deepEqual(lhs: any, rhs: any): boolean {
     // const dbg = (v, p, ...r) => {
@@ -7,14 +16,11 @@ export function deepEqual(lhs: any, rhs: any): boolean {
     // }
     let walk = children()
     for (let [done, path, value] of walk(lhs)) {
-        let peer = getter((e: any, set: Set<any>) => {
-            for (let tmp of set) {
-                if (deepEqual(e, tmp)) {
-                    return [tmp]
-                }
-            }
-            return []
-        }, ...path)(rhs)[0]
+        let peerArray = getter(equalSetElement, ...path)(rhs)
+        if (peerArray.length === 0) {
+            return false
+        }
+        let peer = peerArray[0]
         if (typeof value !== typeof peer) {
             // dbg(value, peer, false, 0)
             return false

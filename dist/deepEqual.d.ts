@@ -1,1 +1,2 @@
-export declare function deepEqual(x: any, y: any): boolean;
+export declare function equalSetElement(e: any, set: Set<any>): readonly [any?];
+export declare function deepEqual(lhs: any, rhs: any): boolean;

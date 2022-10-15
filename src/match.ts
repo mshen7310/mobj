@@ -1,7 +1,7 @@
-import { diff, Predicate } from "./diff"
+import { discriminator, Predicate } from "./discriminator"
 
 export function match(pattern): Predicate {
-    let fn = diff(pattern)
+    let fn = discriminator(pattern)
     return function <T>(...data: T[]): boolean {
         for (let _ of fn(...data)) {
             return false

@@ -1,5 +1,5 @@
 import { deepEqual } from "./deepEqual";
-import { children, getter, Path } from "./gonad";
+import { children, fromGeneratorFn, getter, Path } from "./children";
 
 export type Predicate<T = any> = (...data: T[]) => boolean
 export interface Variable<T = any> {
@@ -34,16 +34,6 @@ export function variable<T = any>(matcher?: Predicate<T>): Variable<T> {
     return ret as Variable<T>
 }
 
-function isGenerator(fn: any): fn is Generator {
-    return fn !== undefined
-        && fn !== null
-        && typeof fn === 'object'
-        && typeof fn[Symbol.iterator] === 'function'
-}
-
-function fromGeneratorFn(x: any): boolean {
-    return isGenerator(x) && !Array.isArray(x) && !(x instanceof Map) && !(x instanceof Set)
-}
 export enum DifferenceType {
     Absence = 'absence',
     Redundancy = 'redundancy',
@@ -76,8 +66,21 @@ export function isDifference(x: any): x is Difference {
         && typeof x.type === 'string'
 }
 export type DiffFn<T = any> = (...data: T[]) => Generator<Difference>
-
-export function diff(pattern: any): DiffFn {
+export function diffSetElement(e: any, set: Set<any>): readonly [any?] {
+    let ptn = discriminator(e)
+    for (let from_set of set) {
+        let different = false
+        for (let _ of ptn(from_set)) {
+            different = true
+            break;
+        }
+        if (!different) {
+            return [from_set]
+        }
+    }
+    return []
+}
+export function discriminator(pattern: any): DiffFn {
     const DiffFnSymbol = Symbol.for('DiffFnSymbol')
     if (typeof pattern === 'function' && pattern[DiffFnSymbol]) {
         return pattern
@@ -108,20 +111,7 @@ export function diff(pattern: any): DiffFn {
     let walk = children()
     function* difffn(...data: any[]) {
         for (let [done, path, value] of walk(pattern)) {
-            const peerArray = getter((from_pattern: any, set: Set<any>) => {
-                let p = diff(from_pattern)
-                for (let from_data of set) {
-                    let different = false
-                    for (let _ of p(from_data)) {
-                        different = true
-                        break;
-                    }
-                    if (!different) {
-                        return [from_data]
-                    }
-                }
-                return []
-            }, ...path)(data[0])
+            const peerArray = getter(diffSetElement, ...path)(data[0])
             if (typeof value === 'function') {
                 let tmp = value(...peerArray)
                 if (fromGeneratorFn(tmp)) {
@@ -177,7 +167,7 @@ export function diff(pattern: any): DiffFn {
 }
 
 export function optional(pattern): DiffFn<Difference> {
-    let fn = diff(pattern)
+    let fn = discriminator(pattern)
     return function* (...data: any[]) {
         if (data.length > 0) {
             yield* fn(...data)

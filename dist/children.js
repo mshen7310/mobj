@@ -1,6 +1,20 @@
 "use strict";
+// function curry(f: Function, arity = f.length, ...args) {
+//     return arity <= args.length ? f(...args) : (...argz) => curry(f, arity, ...args, ...argz)
+// }
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.children = exports.iterators = exports.isPath = exports.setKey = exports.isSetKey = exports.mapKey = exports.isMapKey = exports.Context = void 0;
+exports.children = exports.iterators = exports.getter = exports.isPath = exports.setKey = exports.isSetKey = exports.mapKey = exports.isMapKey = exports.fromGeneratorFn = exports.isGenerator = void 0;
+function isGenerator(fn) {
+    return fn !== undefined
+        && fn !== null
+        && typeof fn === 'object'
+        && typeof fn[Symbol.iterator] === 'function';
+}
+exports.isGenerator = isGenerator;
+function fromGeneratorFn(x) {
+    return isGenerator(x) && !Array.isArray(x) && !(x instanceof Map) && !(x instanceof Set);
+}
+exports.fromGeneratorFn = fromGeneratorFn;
 class Context {
     constructor() {
         this.skip_node = new WeakSet();
@@ -24,28 +38,24 @@ class Context {
         return this.node.pop();
     }
 }
-exports.Context = Context;
-const SetKeySymbol = Symbol.for('SetKeySymbol');
-const MapKeySymbol = Symbol.for('MapKeySymbol');
 function isMapKey(p) {
     return Array.isArray(p)
         && p.length === 2
-        && p[1] === MapKeySymbol;
+        && p[1] === 'MapKey';
 }
 exports.isMapKey = isMapKey;
 function mapKey(k) {
-    return [k, MapKeySymbol];
+    return [k, 'MapKey'];
 }
 exports.mapKey = mapKey;
 function isSetKey(p) {
     return Array.isArray(p)
         && p.length === 2
-        && typeof p[0] === 'number'
-        && p[1] === SetKeySymbol;
+        && p[1] === 'SetKey';
 }
 exports.isSetKey = isSetKey;
-function setKey(index) {
-    return [index, SetKeySymbol];
+function setKey(v) {
+    return [v, 'SetKey'];
 }
 exports.setKey = setKey;
 function isPath(p) {
@@ -59,22 +69,65 @@ function isPath(p) {
             return isSetKey(p) || isMapKey(p);
         }
         default: {
+            // it's fine that the next line is not covered by test case 
+            // because non-path object will be taken as the data to search
+            // 
             return false;
         }
     }
 }
 exports.isPath = isPath;
+function getter(set_getter, ...path) {
+    function get(path, obj) {
+        if (obj instanceof Map && isMapKey(path) && obj.has(path[0])) {
+            return [obj.get(path[0])];
+        }
+        else if (obj instanceof Set && isSetKey(path)) {
+            if (obj.has(path[0])) {
+                return [path[0]];
+            }
+            else if (typeof path[0] === 'object' && path[0] !== null) {
+                return set_getter ? set_getter(path[0], obj) : [];
+            }
+            else {
+                return [];
+            }
+        }
+        else if (obj !== null && obj !== undefined && !isSetKey(path) && !isMapKey(path) && Reflect.has(obj, path)) {
+            return [obj[path]];
+        }
+        else {
+            return [];
+        }
+    }
+    return (obj) => {
+        if (path.length === 0) {
+            return [obj];
+        }
+        else {
+            let [p, ...rest] = path;
+            let tmp = get(p, obj);
+            if (tmp.length === 0) {
+                return [];
+            }
+            else {
+                let rest_get = getter(set_getter, ...rest);
+                return rest_get(tmp[0]);
+            }
+        }
+    };
+}
+exports.getter = getter;
 function iterators(...args) {
     let ret = new Map([
         [Map, function* map_iterator(map) {
                 for (let [k, v] of map) {
-                    yield [[k, MapKeySymbol], v, true];
+                    yield [mapKey(k), v, true];
                 }
             }],
         [Set, function* set_iterator(set) {
-                let i = 0;
                 for (let v of set) {
-                    yield [[i++, SetKeySymbol], v, true];
+                    yield [setKey(v), v, true];
                 }
             }],
         [Array, function* array_iterator(array) {
@@ -107,20 +160,26 @@ function iterators(...args) {
             if (fallback.length > 0) {
                 yield* fallback[0](...objs);
             }
+            else if (obj !== null && obj !== undefined && !obj.constructor) {
+                for (let k of Reflect.ownKeys(obj)) {
+                    yield [k, obj[k], true];
+                }
+            }
         }
     };
 }
 exports.iterators = iterators;
-function children(depth = Infinity, ite = iterators()) {
-    function* elements(...objects) {
+const default_iterator = iterators();
+function children(depth = Infinity, ite = default_iterator) {
+    return function* (...objects) {
         let visited = new WeakSet();
         let ctx = new Context();
         function* walk(path, dpth, ...args) {
-            const done = (...x) => ctx.skip(...x);
-            if (args.length === 0) {
-                yield [done, path];
-            }
-            else if (!visited.has(args[0])) {
+            const done = (...x) => {
+                // console.log('done', ...x)
+                ctx.skip(...x);
+            };
+            if (args.length > 0 && !visited.has(args[0])) {
                 let obj = args[0];
                 if (typeof obj === 'object' && obj !== null) {
                     visited.add(obj);
@@ -140,15 +199,11 @@ function children(depth = Infinity, ite = iterators()) {
                         else {
                             yield [done, [...path, key], child];
                         }
-                        if (ctx.skipped(obj)) {
-                            break;
-                        }
                     }
                 }
             }
         }
         yield* walk([], depth, ...objects);
-    }
-    return elements;
+    };
 }
 exports.children = children;

@@ -1,4 +1,4 @@
-import { children, iterators, setKey, mapKey } from '../src/gonad'
+import { children, iterators, setKey, mapKey, isPath } from '../src/children'
 import 'mocha'
 import { strict as assert } from 'node:assert';
 
@@ -171,6 +171,53 @@ describe('children', function () {
             [['array', 1], { a: 1 }],
             [['array', 1, 'a'], 1],
         ])
+    })
+})
+
+describe(`isPath`, () => {
+    it(`should recognize symbol`, () => {
+        assert.equal(isPath(Symbol()), true)
+    })
+    it(`should recognize number`, () => {
+        assert.equal(isPath(1), true)
+    })
+    it(`should recognize string`, () => {
+        assert.equal(isPath('hello'), true)
+    })
+    it(`should recognize SetKey`, () => {
+        assert.equal(isPath(setKey(1)), true)
+    })
+    it(`should recognize MapKey`, () => {
+        assert.equal(isPath(mapKey(1)), true)
+    })
+    it(`should NOT recognize undefined`, () => {
+        assert.equal(isPath(undefined), false)
+    })
+    it(`should NOT recognize null`, () => {
+        assert.equal(isPath(null), false)
+    })
+    it(`should NOT recognize boolean`, () => {
+        assert.equal(isPath(true), false)
+    })
+    it(`should NOT recognize bigint`, () => {
+        assert.equal(isPath(1n), false)
+    })
+    it(`should NOT recognize []`, () => {
+        assert.equal(isPath([]), false)
+    })
+    it(`should NOT recognize [any, string]`, () => {
+        assert.equal(isPath([1, 'hello']), false)
+    })
+    it(`should NOT recognize {}`, () => {
+        assert.equal(isPath({}), false)
+    })
+    it(`should NOT recognize Date`, () => {
+        assert.equal(isPath(new Date()), false)
+
+    })
+    it(`should NOT recognize RegExp`, () => {
+        assert.equal(isPath(/hello/i), false)
+
     })
 })
 

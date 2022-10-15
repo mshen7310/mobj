@@ -2,6 +2,18 @@
 // function curry(f: Function, arity = f.length, ...args) {
 //     return arity <= args.length ? f(...args) : (...argz) => curry(f, arity, ...args, ...argz)
 // }
+
+export function isGenerator(fn: any): fn is Generator {
+    return fn !== undefined
+        && fn !== null
+        && typeof fn === 'object'
+        && typeof fn[Symbol.iterator] === 'function'
+}
+
+export function fromGeneratorFn(x: any): boolean {
+    return isGenerator(x) && !Array.isArray(x) && !(x instanceof Map) && !(x instanceof Set)
+}
+
 class Context {
     private readonly skip_node = new WeakSet()
     private readonly node: any[] = []
@@ -23,11 +35,11 @@ class Context {
         return this.node.pop()
     }
 }
-
+export type DoneFn = (...obj: any[]) => void
 export type Element<P extends Path, V = any> = readonly [
-    done: (...obj: any[]) => void,
+    done: DoneFn,
     path: P[],
-    value?: V,
+    value: V,
 ]
 export type SetKey<T> = readonly [T, 'SetKey']
 export type MapKey<T> = readonly [T, 'MapKey']
@@ -49,6 +61,25 @@ export function setKey<T>(v: T): SetKey<T> {
     return [v, 'SetKey']
 }
 
+export function isPath(p: any): p is Path {
+    switch (typeof p) {
+        case 'symbol':
+        case 'string':
+        case 'number': {
+            return true
+        }
+        case 'object': {
+            return isSetKey(p) || isMapKey(p)
+        }
+        default: {
+            // it's fine that the next line is not covered by test case 
+            // because non-path object will be taken as the data to search
+            // 
+            return false
+        }
+    }
+
+}
 
 type GenFn<T extends any[], R> = (...input: T) => Generator<R>
 
@@ -70,7 +101,10 @@ type ValueOf<T extends object, Key extends Path> = T extends Map<infer _, infer 
 
 type GenChild<T = any> = GenFn<T[], readonly [KeyOf<T>, any, boolean?]>
 type GetResult<T extends object, P extends Path> = T | ValueOf<T, P>
+
 export type SetGetter<T = any, R = any> = (e: T, set: Set<T>) => readonly [R?]
+
+
 export function getter<P extends Path, T extends object>(set_getter: SetGetter, ...path: P[]): (obj: T) => readonly [GetResult<T, P>?] {
     function get<P extends Path, T extends object>(path: P, obj: T): readonly [ValueOf<T, P>?] {
         if (obj instanceof Map && isMapKey(path) && obj.has(path[0])) {
@@ -79,7 +113,7 @@ export function getter<P extends Path, T extends object>(set_getter: SetGetter, 
             if (obj.has(path[0])) {
                 return [path[0]]
             } else if (typeof path[0] === 'object' && path[0] !== null) {
-                return set_getter(path[0], obj)
+                return set_getter ? set_getter(path[0], obj) : []
             } else {
                 return []
             }

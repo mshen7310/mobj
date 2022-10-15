@@ -1,5 +1,6 @@
-import { path, search, setKey } from '../src/search'
-import { variable } from '../src/diff';
+import { path, search } from '../src/search'
+import { setKey, mapKey } from '../src/children'
+import { variable } from '../src/discriminator';
 
 import 'mocha'
 import { strict as assert } from 'node:assert';
@@ -72,7 +73,7 @@ data.oops.circular = data.oops as any
 
 describe('path', () => {
     it(`should return 2`, () => {
-        assert.deepEqual(path().set(setKey(2)).z(data), [2])
+        assert.deepEqual(path().set(setKey({ k: 1, z: 2 })).z(data), [2])
     })
     it(`should return ${data.work.kkk.hello.world.d[1].k}`, () => {
         assert.deepEqual(path().work.kkk.hello.world.d[1].k(data), [data.work.kkk.hello.world.d[1].k])
@@ -195,11 +196,11 @@ describe('path', () => {
         assert.deepEqual(tmp, [[1, 2], ['k1', 'z1'], ['k2', 'z2']])
     })
     it(`should search for Map`, () => {
-        let tmp = path()(search((obj, ctx) => {
+        let tmp = path()(search((obj, path, done) => {
             if (obj instanceof Map) {
                 return obj
             }
-        })).a(data)
+        }))(mapKey('a'))(data)
         assert.deepEqual(tmp, [1])
     })
     it(`should search for Map`, () => {
@@ -253,24 +254,12 @@ const data2 = {
 }
 
 describe('path', () => {
-    it(`should pass current path in Context 1`, () => {
-        let tmp = path()(search((obj, ctx) => {
-            ctx.getPath()
-            ctx.accessor(1)
-            assert.deepEqual(ctx.accessor()(data)[0], obj)
-        })).a(data)
-    })
-    it(`should pass current path in Context 2`, () => {
-        let tmp = path()(search((obj, ctx) => {
-            assert.deepEqual(ctx.accessor()(data2)[0], obj)
-        })).a(data2)
-    })
     it(`should skip all Set and Map`, () => {
-        let tmp = path()(search((obj, ctx) => {
+        let tmp = path()(search((obj, path, done) => {
             if (obj instanceof Map || obj instanceof Set) {
-                ctx.skip(obj)
+                done(obj)
             } else if (typeof obj === 'number') {
-                ctx.skip(obj)
+                done(obj)
             } else if (typeof obj === 'object' && obj !== null && 'k' in obj && 'z' in obj) {
                 return obj
             }

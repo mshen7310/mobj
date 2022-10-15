@@ -1,69 +1,81 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deepEqual = void 0;
-const search_1 = require("./search");
-function deepEqual(x, y) {
-    function shallowEqual(x, y) {
-        if (x === y || (Number.isNaN(x) && Number.isNaN(y))) {
-            return true;
-        }
-        else if (typeof x !== typeof y || typeof x !== 'object') {
-            return false;
-        }
-        else if (x instanceof Date && y instanceof Date) {
-            return x.getTime() === y.getTime();
-        }
-        else if (x instanceof RegExp && y instanceof RegExp) {
-            return x.toString() === y.toString();
-        }
-        else if (x.constructor !== y.constructor) {
-            return false;
+exports.deepEqual = exports.equalSetElement = void 0;
+const children_1 = require("./children");
+function equalSetElement(e, set) {
+    for (let from_set of set) {
+        if (deepEqual(e, from_set)) {
+            return [from_set];
         }
     }
-    function deepHas(set, e) {
-        for (let element of set) {
-            if (deepEqual(e, element)) {
-                return true;
+    return [];
+}
+exports.equalSetElement = equalSetElement;
+function deepEqual(lhs, rhs) {
+    // const dbg = (v, p, ...r) => {
+    //     const str = (x) => (x === null || x === undefined) ? `${x}` : x.toString()
+    //     console.log(`${str(v)} : ${typeof v} ~~ ${str(p)} : ${typeof p} =>`, ...r)
+    // }
+    let walk = (0, children_1.children)();
+    for (let [done, path, value] of walk(lhs)) {
+        let peerArray = (0, children_1.getter)(equalSetElement, ...path)(rhs);
+        if (peerArray.length === 0) {
+            return false;
+        }
+        let peer = peerArray[0];
+        if (typeof value !== typeof peer) {
+            // dbg(value, peer, false, 0)
+            return false;
+        }
+        if (typeof peer === 'number') {
+            if (value !== peer) {
+                if (!(isNaN(value) && isNaN(peer))) {
+                    // dbg(value, peer, false, 1)
+                    return false;
+                }
             }
         }
-        return false;
-    }
-    const is_equal = shallowEqual(x, y);
-    if (is_equal !== undefined) {
-        return is_equal;
-    }
-    const p = (0, search_1.path)()((0, search_1.search)((obj, ctx) => {
-        const peerArray = ctx.accessor()(y);
-        const peer = peerArray[0];
-        const equal_primitive = shallowEqual(obj, peer);
-        if (false === equal_primitive) {
-            ctx.skip();
-            return false;
-        }
-        else if (undefined === equal_primitive) {
-            if ((obj instanceof Map && peer instanceof Map && obj.size !== peer.size)
-                || (Array.isArray(obj) && Array.isArray(peer) && obj.length !== peer.length)
-                || (obj instanceof Set && peer instanceof Set && obj.size !== peer.size)
-                || (Reflect.ownKeys(obj).length !== Reflect.ownKeys(peer).length)) {
-                ctx.skip();
+        else if (typeof value !== 'object') {
+            if (value !== peer) {
+                // dbg(value, peer, false, 2)
                 return false;
             }
-            else if (obj instanceof Set && peer instanceof Set) {
-                for (let xi of obj) {
-                    if (!peer.has(xi)) {
-                        if (typeof xi === 'object' && xi !== null) {
-                            if (deepHas(peer, xi)) {
-                                continue;
-                            }
-                        }
-                        ctx.skip();
-                        return false;
-                    }
+        }
+        if (typeof value === 'object' && value !== null && value !== undefined && peer !== null && peer !== undefined) {
+            if (value instanceof Date && peer instanceof Date) {
+                if (value.getTime() !== peer.getTime()) {
+                    // dbg(value, peer, false, 3)
+                    return false;
                 }
-                ctx.skip(obj);
+            }
+            if (value instanceof RegExp && peer instanceof RegExp) {
+                if (value.toString() !== peer.toString()) {
+                    // dbg(value, peer, false, 4)
+                    return false;
+                }
+            }
+            if (value.constructor !== peer.constructor) {
+                // dbg(value, peer, false, 5)
+                return false;
+            }
+            if (value instanceof Map && peer instanceof Map && value.size !== peer.size) {
+                // dbg(value, peer, false, 6)
+                return false;
+            }
+            if (Array.isArray(value) && Array.isArray(peer) && value.length !== peer.length) {
+                // dbg(value, peer, false, 7)
+                return false;
+            }
+            if (value instanceof Set && peer instanceof Set && value.size !== peer.size) {
+                // dbg(value, peer, false, 8)
+                return false;
+            }
+            if (Reflect.ownKeys(value).length !== Reflect.ownKeys(peer).length) {
+                // dbg(value, peer, false, 9)
+                return false;
             }
         }
-    }))();
-    return p(x).length === 0;
+    }
+    return true;
 }
 exports.deepEqual = deepEqual;

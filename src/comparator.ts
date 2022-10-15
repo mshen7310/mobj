@@ -1,4 +1,5 @@
-import { Path, path } from "./search";
+import { getter, Path } from "./children";
+import { equalSetElement } from "./deepEqual";
 
 export enum CompareResult {
     LessThan = -1,
@@ -6,9 +7,10 @@ export enum CompareResult {
     Equal = 0
 }
 export function comparator(...p: Path[]): (a: any, b: any) => CompareResult {
+    let get = getter(equalSetElement, ...p)
     return (a: any, b: any) => {
-        let aa = path(Array.from, p)()(a)[0]
-        let bb = path(Array.from, p)()(b)[0]
+        let aa = get(a)[0]
+        let bb = get(b)[0]
         if (aa < bb) {
             // console.log(aa, '<', bb)
             return CompareResult.LessThan;

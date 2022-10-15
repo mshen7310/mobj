@@ -1,4 +1,4 @@
-import { Path } from "./search";
+import { Path } from "./children";
 export declare enum CompareResult {
     LessThan = -1,
     BiggerThan = 1,

@@ -1,6 +1,6 @@
 import 'mocha'
 import { strict as assert } from 'node:assert';
-import { variable } from '../src/diff';
+import { variable } from '../src/discriminator';
 
 describe(`Variable should match anything`, () => {
     let date = new Date()
