@@ -1,29 +1,10 @@
 import { mapKey, Path, setKey } from "./children"
 import { deepEqual } from "./deepEqual"
-import { DifferenceType } from "./discriminator"
+import { DifferenceType, sameInstance } from "./discriminator"
 
-function isWalkable(v: any): boolean {
-    return typeof v === 'object'
-        && v !== null
-        && !(v instanceof Date)
-        && !(v instanceof RegExp)
-        && !(v instanceof Int8Array)
-        && !(v instanceof Uint8Array)
-        && !(v instanceof Uint8ClampedArray)
-        && !(v instanceof Int16Array)
-        && !(v instanceof Uint16Array)
-        && !(v instanceof Int32Array)
-        && !(v instanceof Uint32Array)
-        && !(v instanceof Float32Array)
-        && !(v instanceof Float64Array)
-        && !(v instanceof DataView)
-        && !(v instanceof ArrayBuffer)
-        && !(v instanceof Buffer)
-        && !(v instanceof ReadableStream)
-        && !(v instanceof WritableStream)
-        && !(v instanceof TransformStream)
-        && !(v instanceof Promise)
-}
+
+
+
 
 function inSet(e: any, set: Set<any>): boolean {
     if (set.has(e)) {
@@ -37,6 +18,7 @@ function inSet(e: any, set: Set<any>): boolean {
         return false
     }
 }
+export const diffInfo = 'expected = lhs && actual = rhs'
 export function* diff(lhs: any, rhs: any, key: Path[] = []) {
     if (lhs !== rhs) {
         const discrepancy = {
@@ -44,7 +26,7 @@ export function* diff(lhs: any, rhs: any, key: Path[] = []) {
             type: DifferenceType.Discrepancy,
             expected: lhs,
             actual: rhs,
-            info: 'expected === lhs && actual === rhs'
+            info: diffInfo
         }
         if (typeof lhs !== typeof rhs) {
             yield discrepancy
@@ -66,20 +48,20 @@ export function* diff(lhs: any, rhs: any, key: Path[] = []) {
                     let all_keys = [...new Set(Reflect.ownKeys(lhs).concat(Reflect.ownKeys(rhs)))].map(x => typeof x === 'string' ? parseInt(x) : x)
                     for (let k of all_keys) {
                         if (Reflect.has(lhs, k) && Reflect.has(rhs, k)) {
-                            yield* diff(lhs[k], rhs[k], key.concat(k))
+                            yield* diff(lhs[k], rhs[k], [...key, k])
                         } else if (Reflect.has(lhs, k)) {
                             yield {
-                                path: key.concat(k),
+                                path: [...key, k],
                                 type: DifferenceType.Absence,
                                 expected: lhs[k],
-                                info: 'expected === lhs && actual === rhs'
+                                info: diffInfo
                             }
                         } else if (Reflect.has(rhs, k)) {
                             yield {
-                                path: key.concat(k),
+                                path: [...key, k],
                                 type: DifferenceType.Redundancy,
-                                actual: lhs[k],
-                                info: 'expected === lhs && actual === rhs'
+                                actual: rhs[k],
+                                info: diffInfo
                             }
                         }
                     }
@@ -90,17 +72,17 @@ export function* diff(lhs: any, rhs: any, key: Path[] = []) {
                         const in_lhs = inSet(e, lhs)
                         if (in_lhs && !in_rhs) {
                             yield {
-                                path: key.concat(setKey(e)),
+                                path: [...key, setKey(e)],
                                 type: DifferenceType.Absence,
                                 expected: e,
-                                info: 'expected === lhs && actual === rhs'
+                                info: diffInfo
                             }
                         } else if (!in_lhs && in_rhs) {
                             yield {
-                                path: key.concat(setKey(e)),
+                                path: [...key, setKey(e)],
                                 type: DifferenceType.Redundancy,
                                 actual: e,
-                                info: 'expected === lhs && actual === rhs'
+                                info: diffInfo
                             }
                         }
                     }
@@ -108,46 +90,70 @@ export function* diff(lhs: any, rhs: any, key: Path[] = []) {
                     let all_keys = new Set([...lhs.keys()].concat([...rhs.keys()]))
                     for (let k of all_keys) {
                         if (lhs.has(k) && rhs.has(k)) {
-                            yield* diff(lhs.get(k), rhs.get(k), key.concat(mapKey(k)))
+                            yield* diff(lhs.get(k), rhs.get(k), [...key, mapKey(k)])
                         } else if (lhs.has(k)) {
                             yield {
-                                path: key.concat(mapKey(k)),
+                                path: [...key, mapKey(k)],
                                 type: DifferenceType.Absence,
                                 expected: lhs.get(k),
-                                info: 'expected === lhs && actual === rhs'
+                                info: diffInfo
                             }
                         } else {
                             yield {
-                                path: key.concat(mapKey(k)),
+                                path: [...key, mapKey(k)],
                                 type: DifferenceType.Redundancy,
                                 actual: rhs.get(k),
-                                info: 'expected === lhs && actual === rhs'
+                                info: diffInfo
                             }
                         }
                     }
-                } else if (isWalkable(lhs) && isWalkable(rhs)) {
-                    let all_keys = new Set(Reflect.ownKeys(lhs).concat(Reflect.ownKeys(rhs)))
-                    for (let k of all_keys) {
-                        if (Reflect.has(lhs, k) && Reflect.has(rhs, k)) {
-                            yield* diff(lhs[k], rhs[k], key.concat(k))
-                        } else if (Reflect.has(lhs, k)) {
-                            yield {
-                                path: key.concat(k),
-                                type: DifferenceType.Absence,
-                                expected: lhs[k],
-                                info: 'expected === lhs && actual === rhs'
-                            }
-                        } else if (Reflect.has(rhs, k)) {
-                            yield {
-                                path: key.concat(k),
-                                type: DifferenceType.Redundancy,
-                                actual: lhs[k],
-                                info: 'expected === lhs && actual === rhs'
+                } else if (sameInstance(lhs, rhs, Buffer)) {
+                    if (Buffer.compare(lhs, rhs) !== 0) {
+                        yield discrepancy
+                    }
+                } else if (sameInstance(lhs, rhs, Int8Array,
+                    Uint8Array,
+                    Uint8ClampedArray,
+                    Int16Array,
+                    Uint16Array,
+                    Int32Array,
+                    Uint32Array,
+                    Float32Array,
+                    Float64Array,
+                    DataView,
+                    ArrayBuffer
+                )) {
+                    if (lhs.length !== rhs.length) {
+                        yield discrepancy
+                    } else {
+                        for (let i = 0; i < lhs.length; ++i) {
+                            if (lhs[i] !== rhs[i]) {
+                                yield discrepancy
+                                break;
                             }
                         }
                     }
                 } else {
-                    yield discrepancy
+                    let all_keys = new Set(Reflect.ownKeys(lhs).concat(Reflect.ownKeys(rhs)))
+                    for (let k of all_keys) {
+                        if (Reflect.has(lhs, k) && Reflect.has(rhs, k)) {
+                            yield* diff(lhs[k], rhs[k], [...key, k])
+                        } else if (Reflect.has(lhs, k)) {
+                            yield {
+                                path: [...key, k],
+                                type: DifferenceType.Absence,
+                                expected: lhs[k],
+                                info: diffInfo
+                            }
+                        } else if (Reflect.has(rhs, k)) {
+                            yield {
+                                path: [...key, k],
+                                type: DifferenceType.Redundancy,
+                                actual: rhs[k],
+                                info: diffInfo
+                            }
+                        }
+                    }
                 }
                 break
             }

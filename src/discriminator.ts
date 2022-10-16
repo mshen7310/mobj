@@ -80,6 +80,14 @@ export function diffSetElement(e: any, set: Set<any>): readonly [any?] {
     }
     return []
 }
+export function sameInstance(lhs, rhs, ...cls) {
+    for (let c of cls) {
+        if (lhs instanceof c && rhs instanceof c) {
+            return true
+        }
+    }
+    return false
+}
 export function discriminator(pattern: any, set_getter = diffSetElement): DiffFn {
     const DiffFnSymbol = Symbol.for('DiffFnSymbol')
     if (typeof pattern === 'function' && pattern[DiffFnSymbol]) {
@@ -98,14 +106,39 @@ export function discriminator(pattern: any, set_getter = diffSetElement): DiffFn
         if (typeof x !== 'object' || x === null || y === null) {
             return false
         }
-        if (x instanceof Date && y instanceof Date) {
-            return x.getTime() === y.getTime()
-        }
-        if (x instanceof RegExp && y instanceof RegExp) {
-            return x.toString() === y.toString()
-        }
         if (x.constructor !== y.constructor) {
             return false
+        }
+        if (sameInstance(x, y, Date)) {
+            return x.getTime() === y.getTime()
+        }
+        if (sameInstance(x, y, RegExp)) {
+            return x.toString() === y.toString()
+        }
+        if (sameInstance(x, y, Buffer)) {
+            return Buffer.compare(x, y) === 0
+        }
+        if (sameInstance(x, y, Int8Array,
+            Uint8Array,
+            Uint8ClampedArray,
+            Int16Array,
+            Uint16Array,
+            Int32Array,
+            Uint32Array,
+            Float32Array,
+            Float64Array,
+            DataView,
+            ArrayBuffer)) {
+            if (x.length !== y.length) {
+                return false
+            } else {
+                for (let i = 0; i < x.length; ++i) {
+                    if (x[i] !== y[i]) {
+                        return false
+                    }
+                }
+                return true
+            }
         }
     }
     let walk = children()

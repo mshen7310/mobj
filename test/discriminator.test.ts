@@ -245,8 +245,19 @@ describe('diff(pattern)(data) shallow comparison', () => {
         diff(/hello/i)
         let fn = a => a
         diff(fn)
-
     })
+    it(`pattern can be Buffer`, () => {
+        const diff = primitivePattern(Buffer.from('hello'))
+        diff(Buffer.from('hello'), true)
+        diff(Buffer.from('world'), false)
+    })
+    it(`pattern can be TypedArray`, () => {
+        const diff = primitivePattern(Int16Array.from([1]))
+        diff(Int16Array.from([1]), true)
+        diff(Int16Array.from([2]), false)
+        diff(Int16Array.from([1, 2]), false)
+    })
+
     it(`pattern can be []`, () => {
         const diff = primitivePattern([1, 2, 3])
         diff([1, 2, 3], true)

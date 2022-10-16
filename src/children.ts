@@ -1,7 +1,4 @@
 
-// function curry(f: Function, arity = f.length, ...args) {
-//     return arity <= args.length ? f(...args) : (...argz) => curry(f, arity, ...args, ...argz)
-// }
 
 export function isGenerator(fn: any): fn is Generator {
     return fn !== undefined
